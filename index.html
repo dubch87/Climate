@@ -6,19 +6,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    body, html, #map {
-      height: 100%;
-      margin: 0;
-      padding: 0;
+    #container {
+      display: flex;
+      height: 100vh;
     }
+
     #map {
-      height: 70vh;
+      flex: 3;
+    }
+
+    #plot {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
     }
   </style>
 </head>
 <body>
-  <div id="map"></div>
-
+  <div id="container">
+    <div id="map"></div>
+    <div id="plot">
+      <h2 id="plot-title">Average temperature range for ...</h2>
+      <div id="plotly-chart"></div>
+    </div>
+  </div>
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>

@@ -12,13 +12,19 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-
 // Helper: get today's month-day string like "06-04"
 function getTodayMonthDay() {
   const today = new Date();
   const month = (today.getMonth() + 1).toString().padStart(2, '0');
   const day = today.getDate().toString().padStart(2, '0');
   return `${month}-${day}`;
+}
+
+// Helper: get today's full formatted date like "June 4"
+function getTodayFormatted() {
+  const today = new Date();
+  const options = { month: 'long', day: 'numeric' };
+  return today.toLocaleDateString(undefined, options);
 }
 
 // Fetch max temps for the given station & monthDay over 1991-2020
@@ -43,14 +49,20 @@ async function fetchTempsForDateRange(stationId, monthDay) {
       const data = await res.json();
 
       if (data.results && data.results.length > 0) {
-        data.results.forEach(r => temps.push(r.value / 10)); // tenths °C → °C
+        data.results.forEach(r => {
+          const celsius = r.value / 10; // tenths °C → °C
+          const fahrenheit = (celsius * 9/5) + 32;
+          temps.push(fahrenheit);
+        });
       }
     } catch (err) {
       console.error(`Fetch error for ${date}:`, err);
     }
+
+    // To avoid hitting rate limits
     await sleep(250);
   }
-  
+
   return temps;
 }
 
@@ -63,7 +75,6 @@ L.esri.featureLayer({
       const stationId = feature.properties.STATION_ID;
       const stationName = feature.properties.STATION_NAME;
 
-      // Show loading popup
       layer.bindPopup(`Loading max temps for ${stationName}...`).openPopup();
 
       const monthDay = getTodayMonthDay();
@@ -74,25 +85,17 @@ L.esri.featureLayer({
         return;
       }
 
-      // Create container div for Plotly plot inside the popup
       const plotId = `plot-${stationId}`;
-      let plotDiv = document.getElementById(plotId);
+      const todayFormatted = getTodayFormatted();
 
-        if (!plotDiv) {
-          plotDiv = document.createElement('div');
-          plotDiv.id = plotId;
-          plotDiv.style.width = '100%';
-          plotDiv.style.height = '300px';
-          document.body.appendChild(plotDiv);
-        }
       const popupContent = `
         <strong>${stationName}</strong><br>
-        Max Temps on ${monthDay} (1991-2020)<br>
+        Average temperature range for ${todayFormatted}<br>
         <div id="${plotId}" style="width: 300px; height: 250px;"></div>
       `;
       layer.setPopupContent(popupContent);
 
-      // Delay to allow popup to render its content div
+      // Delay to let the popup content render, then draw the plot
       setTimeout(() => {
         Plotly.newPlot(plotId, [{
           y: temps,
@@ -102,9 +105,9 @@ L.esri.featureLayer({
           pointpos: -1.8,
           marker: {color: '#007BFF'}
         }], {
-          margin: {t: 30, b: 40},
-          yaxis: { title: 'Temperature (°C)' },
-          title: `Max Temps on ${monthDay}`
+          margin: {t: 40, b: 40},
+          yaxis: { title: 'Temperature (°F)' },
+          title: `Max Temps on ${todayFormatted}`
         }, {responsive: true});
       }, 300);
     });
