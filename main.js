@@ -88,27 +88,35 @@ L.esri.featureLayer({
       const plotId = `plot-${stationId}`;
       const todayFormatted = getTodayFormatted();
 
+      // Build popup content including the div for Plotly
       const popupContent = `
         <strong>${stationName}</strong><br>
-        Average temperature range for ${todayFormatted}<br>
+        Max Temps on ${monthDay} (1991-2020)<br>
         <div id="${plotId}" style="width: 300px; height: 250px;"></div>
       `;
+      
+      // Insert popup content into the layer popup
       layer.setPopupContent(popupContent);
-
-      // Delay to let the popup content render, then draw the plot
+      
+      // Wait a bit to let popup content render, then create the plot
       setTimeout(() => {
-        Plotly.newPlot(plotId, [{
-          y: temps,
-          type: 'box',
-          boxpoints: 'all',
-          jitter: 0.5,
-          pointpos: -1.8,
-          marker: {color: '#007BFF'}
-        }], {
-          margin: {t: 40, b: 40},
-          yaxis: { title: 'Temperature (°F)' },
-          title: `Max Temps on ${todayFormatted}`
-        }, {responsive: true});
+        const plotDiv = document.getElementById(plotId);
+        if (plotDiv) {
+          Plotly.newPlot(plotId, [{
+            y: temps,
+            type: 'box',
+            boxpoints: 'all',
+            jitter: 0.5,
+            pointpos: -1.8,
+            marker: {color: '#007BFF'}
+          }], {
+            margin: {t: 30, b: 40},
+            yaxis: { title: 'Temperature (°F)' },
+            title: `Max Temps on ${todayFormatted}`
+          }, {responsive: true});
+        } else {
+          console.error(`Could not find plot div with id ${plotId}`);
+        }
       }, 300);
     });
 
@@ -116,3 +124,4 @@ L.esri.featureLayer({
     layer.bindPopup(`Station: ${feature.properties.STATION_NAME}`);
   }
 }).addTo(map);
+
