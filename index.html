@@ -2,54 +2,77 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>NOAA Station Map & Plots</title>
+  <title>Daily Climate Data</title>
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     crossorigin=""
   />
   <style>
-    /* Make sure html and body fill viewport */
     html, body {
       height: 100%;
       margin: 0;
       font-family: Arial, sans-serif;
     }
 
-    /* Map takes half viewport height */
-    #map {
-      height: 50vh;
-      width: 100vw;
+    body {
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
     }
 
-    /* Plot containers full width with fixed height */
-    #boxplot-tmin,
-    #boxplot-tmax,
-    #scatterplot {
-      width: 100vw;
-      height: 300px;
-      margin-top: 10px;
-      border: 1px solid #ccc; /* visual debugging */
+    #map {
+      flex: 1;
+      width: 67%;
+      height: 100%;
+    }
+
+    #plots {
+      width: 33%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
       box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    .plot-container {
+      height: 300px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
     }
 
     #scatterplot {
       height: 400px;
     }
   </style>
-</head>
-<body>
-  <div id="map"></div>
+  </head>
+  <body>
+    <div id="map"></div>
 
-  <div id="boxplot-tmin"></div>
-  <div id="boxplot-tmax"></div>
-  <div id="scatterplot"></div>
+    <div id="plots">
+      <div id="plot-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <div id="station-name" style="font-weight: bold; font-size: 1.2em;"></div>
+        <div>
+          Exact Tmin for selected date: <span id="exact-min">N/A</span><br />
+          Exact Tmax for selected date: <span id="exact-max">N/A</span>
+        </div>
+        <div id="date-range" style="margin-top: 8px; font-weight: bold;"></div>
+        <div>
+          <label for="datePicker"><strong>Date:</strong></label>
+          <input type="date" id="datePicker" />
+        </div>
+      </div>
+      <div id="boxplot-tmax" class="plot-container"></div>
+      <div id="boxplot-tmin" class="plot-container"></div>
+      <div id="scatterplot" class="plot-container"></div>
+    </div>
 
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    crossorigin=""
-  ></script>
-  <script src="https://cdn.plot.ly/plotly-2.25.2.min.js"></script>
-  <script src="js/main.js"></script>
-</body>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://cdn.plot.ly/plotly-2.25.2.min.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+
 </html>
