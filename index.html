@@ -1,38 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Climate Normals</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <meta charset="UTF-8" />
+  <title>NOAA Station Map & Plots</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
   <style>
-    #container {
-      display: flex;
-      height: 100vh;
+    /* Make sure html and body fill viewport */
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, sans-serif;
     }
 
+    /* Map takes half viewport height */
     #map {
-      flex: 3;
+      height: 50vh;
+      width: 100vw;
     }
 
-    #plot {
-      flex: 1;
-      padding: 10px;
-      overflow-y: auto;
+    /* Plot containers full width with fixed height */
+    #boxplot-tmin,
+    #boxplot-tmax,
+    #scatterplot {
+      width: 100vw;
+      height: 300px;
+      margin-top: 10px;
+      border: 1px solid #ccc; /* visual debugging */
+      box-sizing: border-box;
+    }
+
+    #scatterplot {
+      height: 400px;
     }
   </style>
 </head>
 <body>
-  <div id="container">
-    <div id="map"></div>
-    <div id="plot">
-      <h2 id="plot-title">Average temperature range for ...</h2>
-      <div id="plotly-chart"></div>
-    </div>
-  </div>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
-  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
-  <script src="main.js"></script>
+  <div id="map"></div>
+
+  <div id="boxplot-tmin"></div>
+  <div id="boxplot-tmax"></div>
+  <div id="scatterplot"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""
+  ></script>
+  <script src="https://cdn.plot.ly/plotly-2.25.2.min.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
