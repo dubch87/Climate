@@ -16,12 +16,17 @@ const stations = [
   },
 ];
 
+let lastSelectedStation = null;
+let lastSelectedMonth = null;
+let lastSelectedDay = null;
+
 // Helper function to plot data using Plotly
 function plotData(stationName, data) {
+  document.getElementById('station-name').textContent = stationName;
+
   const tminValues = data.tmin.map(d => d.value);
   const tmaxValues = data.tmax.map(d => d.value);
 
-  // Box plot traces
   const boxTmin = {
     y: tminValues,
     type: 'box',
@@ -37,7 +42,6 @@ function plotData(stationName, data) {
     marker: { color: 'red' },
   };
 
-  // Scatter plot traces
   const scatterTmin = {
     x: data.tmin.map(d => d.year),
     y: tminValues,
@@ -55,23 +59,65 @@ function plotData(stationName, data) {
     marker: { color: 'red' },
   };
 
-  // Render box plots side by side
-  Plotly.newPlot('boxplot-tmin', [boxTmin], {
-    title: `${stationName} - Daily Minimum Temperatures`,
-    margin: { t: 40, b: 40 },
-  });
+  // Remove station name from plot titles
   Plotly.newPlot('boxplot-tmax', [boxTmax], {
-    title: `${stationName} - Daily Maximum Temperatures`,
+    title: 'Daily Maximum Temperatures',
     margin: { t: 40, b: 40 },
   });
-
-  // Render scatter plot
+  Plotly.newPlot('boxplot-tmin', [boxTmin], {
+    title: 'Daily Minimum Temperatures',
+    margin: { t: 40, b: 40 },
+  });
   Plotly.newPlot('scatterplot', [scatterTmin, scatterTmax], {
-    title: `${stationName} - Min & Max Temperatures by Year`,
+    title: 'Min & Max Temperatures by Year',
     xaxis: { title: 'Year', dtick: 2 },
     yaxis: { title: 'Temperature (°F)' },
     margin: { t: 50, b: 50 },
   });
+
+  // Show exact min/max for selected year if available
+  const dateInput = document.getElementById('datePicker');
+  if (dateInput && dateInput.value) {
+    const selectedYear = new Date(dateInput.value).getFullYear();
+
+    const tminForYear = data.tmin.find(d => d.year === selectedYear);
+    const tmaxForYear = data.tmax.find(d => d.year === selectedYear);
+
+    const exactMinSpan = document.getElementById('exact-min');
+    const exactMaxSpan = document.getElementById('exact-max');
+
+    if (tminForYear) {
+      exactMinSpan.textContent = `${tminForYear.value} °F (Year: ${selectedYear})`;
+    } else {
+      exactMinSpan.textContent = `No data for ${selectedYear}`;
+    }
+    if (tmaxForYear) {
+      exactMaxSpan.textContent = `${tmaxForYear.value} °F (Year: ${selectedYear})`;
+    } else {
+      exactMaxSpan.textContent = `No data for ${selectedYear}`;
+    }
+  }
+}
+
+// Function to load and plot data for a given station and month/day
+function loadDataForStationDate(station, month, day) {
+  // Store last selected
+  lastSelectedStation = station;
+  lastSelectedMonth = month;
+  lastSelectedDay = day;
+
+  fetch(`https://climate-backend-9q9b.onrender.com/api/station?id=${station.id}&month=${month}&day=${day}`)
+    .then(response => {
+      if (!response.ok) throw new Error(`Network response was not OK (${response.status})`);
+      return response.json();
+    })
+    .then(data => {
+      plotData(station.name, data);
+    })
+    .catch(err => {
+      console.error('Fetch error:', err);
+      alert(`Error loading data for ${station.name}`);
+    });
 }
 
 // Add markers to map and handle click events
@@ -80,32 +126,38 @@ stations.forEach(station => {
   marker.bindPopup(`Click to load data for ${station.name}`);
 
   marker.on('click', () => {
-    // Use today's date for query
-    const now = new Date();
-    const month = now.getMonth() + 1;
-    const day = now.getDate();
+    const dateInput = document.getElementById('datePicker');
+    let month, day;
+    if (dateInput && dateInput.value) {
+      const selectedDate = new Date(dateInput.value);
+      month = selectedDate.getMonth() + 1;
+      day = selectedDate.getDate();
+    } else {
+      const now = new Date();
+      month = now.getMonth() + 1;
+      day = now.getDate();
+    }
 
     marker.getPopup().setContent(`Loading data for ${station.name}...`).openOn(map);
-
-    fetch(`https://climate-backend-9q9b.onrender.com/api/station?id=${station.id}&month=${month}&day=${day}`)
-      .then(response => {
-        if (!response.ok) throw new Error(`Network response was not OK (${response.status})`);
-        return response.json();
-      })
-      .then(data => {
-        const popupContent = `
-          <strong>${station.name}</strong><br>
-          Tmin observations: ${data.tmin.length}<br>
-          Tmax observations: ${data.tmax.length}
-        `;
-        marker.getPopup().setContent(popupContent).openOn(map);
-
-        // Plot the data
-        plotData(station.name, data);
-      })
-      .catch(err => {
-        console.error('Fetch error:', err);
-        marker.getPopup().setContent(`Error loading data for ${station.name}`).openOn(map);
-      });
+    loadDataForStationDate(station, month, day);
   });
+});
+
+// Setup date picker with default today and event listener
+document.addEventListener('DOMContentLoaded', () => {
+  const dateInput = document.getElementById('datePicker');
+  if (dateInput) {
+    const today = new Date();
+    dateInput.value = today.toISOString().split('T')[0];
+
+    dateInput.addEventListener('change', () => {
+      if (lastSelectedStation) {
+        const selectedDate = new Date(dateInput.value);
+        const month = selectedDate.getMonth() + 1;
+        const day = selectedDate.getDate();
+
+        loadDataForStationDate(lastSelectedStation, month, day);
+      }
+    });
+  }
 });
