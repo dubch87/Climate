@@ -1,20 +1,67 @@
 // Initialize the map centered on North Carolina
-const map = L.map('map').setView([35.7796, -78.6382], 7);
+const map = L.map('map').setView([35.88, -78.79], 15);
 
 // Add OpenStreetMap tiles
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors',
 }).addTo(map);
 
-// NOAA station example(s)
-const stations = [
-  {
-    id: 'GHCND:USC00318744',
-    name: 'Raleigh, NC',
-    lat: 35.7796,
-    lon: -78.6382,
-  },
-];
+// Fetch stations from the backend and add markers
+fetch('https://climate-backend-9q9b.onrender.com/api/stations')
+  .then(response => {
+    if (!response.ok) throw new Error(`Failed to fetch stations: ${response.status}`);
+    return response.json();
+  })
+  .then(stations => {
+    stations.forEach(station => {
+      const marker = L.marker([station.lat, station.lon]).addTo(map);
+      marker.bindPopup(`Click to load data for ${station.name}`);
+
+      marker.on('click', () => {
+        const dateInput = document.getElementById('datePicker');
+        let month, day;
+
+        if (dateInput && dateInput.value) {
+          const selectedDate = new Date(dateInput.value);
+          month = selectedDate.getMonth() + 1;
+          day = selectedDate.getDate();
+        } else {
+          const now = new Date();
+          month = now.getMonth() + 1;
+          day = now.getDate();
+        }
+
+        marker.getPopup().setContent(`Loading data for ${station.name}...`).openOn(map);
+
+        lastSelectedStation = station;
+        lastSelectedMarker = marker;
+
+        fetch(`https://climate-backend-9q9b.onrender.com/api/station?id=${station.id}&month=${month}&day=${day}`)
+          .then(response => {
+            if (!response.ok) throw new Error(`Network response was not OK (${response.status})`);
+            return response.json();
+          })
+          .then(data => {
+            const popupContent = `
+              <strong>${station.name}</strong><br>
+              Tmin observations: ${data.tmin.length}<br>
+              Tmax observations: ${data.tmax.length}
+            `;
+            marker.getPopup().setContent(popupContent).openOn(map);
+            plotData(station.name, data);
+          })
+          .catch(err => {
+            console.error('Fetch error:', err);
+            marker.getPopup().setContent(`Error loading data for ${station.name}`).openOn(map);
+          });
+      });
+    });
+  })
+  .catch(err => {
+    console.error('Error loading stations:', err);
+  });
+
+
 
 let lastSelectedStation = null;
 let lastSelectedMarker = null;
@@ -75,52 +122,6 @@ function plotData(stationName, data) {
     margin: { t: 50, b: 50 },
   });
 }
-
-// Add markers to map and handle click events
-stations.forEach(station => {
-  const marker = L.marker([station.lat, station.lon]).addTo(map);
-  marker.bindPopup(`Click to load data for ${station.name}`);
-
-  marker.on('click', () => {
-    const dateInput = document.getElementById('datePicker');
-    let month, day;
-
-    if (dateInput && dateInput.value) {
-      const selectedDate = new Date(dateInput.value);
-      month = selectedDate.getMonth() + 1;
-      day = selectedDate.getDate();
-    } else {
-      const now = new Date();
-      month = now.getMonth() + 1;
-      day = now.getDate();
-    }
-
-    marker.getPopup().setContent(`Loading data for ${station.name}...`).openOn(map);
-
-    lastSelectedStation = station;
-    lastSelectedMarker = marker;
-
-    fetch(`https://climate-backend-9q9b.onrender.com/api/station?id=${station.id}&month=${month}&day=${day}`)
-      .then(response => {
-        if (!response.ok) throw new Error(`Network response was not OK (${response.status})`);
-        return response.json();
-      })
-      .then(data => {
-        const popupContent = `
-          <strong>${station.name}</strong><br>
-          Tmin observations: ${data.tmin.length}<br>
-          Tmax observations: ${data.tmax.length}
-        `;
-        marker.getPopup().setContent(popupContent).openOn(map);
-
-        plotData(station.name, data);
-      })
-      .catch(err => {
-        console.error('Fetch error:', err);
-        marker.getPopup().setContent(`Error loading data for ${station.name}`).openOn(map);
-      });
-  });
-});
 
 // Date picker setup + change listener
 document.addEventListener('DOMContentLoaded', () => {
