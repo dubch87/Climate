@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Climate Analytics Dashboard</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
@@ -20,60 +21,102 @@
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --sub-text: #a0a0a0;
-        --border: #333; --ribbon-bg: #2d2d2d; --map-invert: 0.9;
+        --bg: #121212; 
+        --card-bg: #1e1e1e; 
+        --text: #e0e0e0; 
+        --sub-text: #a0a0a0;
+        --border: #333; 
+        --ribbon-bg: #2d2d2d; 
+        --map-invert: 0.9;
       }
     }
 
-    body { margin:0; padding:0; font-family:'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); transition: background 0.3s; }
-    .top-header { text-align: center; margin: 30px 0 5px 0; font-weight: 300; }
-    #stationHeader { text-align: center; margin-bottom: 20px; color: var(--primary); font-weight: 600; font-size: 1.5rem; }
+    body { margin:0; padding:0; font-family:'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); transition: background 0.3s; overflow-x: hidden; }
     
-    #controls { margin: 0 auto 15px auto; padding: 15px 35px; background: var(--card-bg); border-radius: 50px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; gap: 30px; align-items: center; justify-content: center; width: fit-content; border: 1px solid var(--border); }
+    .top-header { text-align: center; margin: 30px 0 5px 0; font-weight: 300; font-size: 2rem; }
+    #stationHeader { text-align: center; margin-bottom: 20px; color: var(--primary); font-weight: 600; font-size: 1.5rem; min-height: 1.6em; }
+    
+    #controls { 
+      margin: 0 auto 15px auto; padding: 15px 30px; background: var(--card-bg); border-radius: 50px; 
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; gap: 20px; align-items: center; justify-content: center; 
+      width: fit-content; border: 1px solid var(--border); flex-wrap: wrap;
+    }
 
-    #periodRibbon { margin: 0 auto 30px auto; display: flex; justify-content: center; gap: 8px; padding: 5px; background: var(--ribbon-bg); width: fit-content; border-radius: 30px; }
+    select {
+      background: var(--card-bg); color: var(--text); padding: 8px 30px 8px 12px; border: 1px solid var(--border);
+      border-radius: 12px; font-size: 1rem; outline: none; cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='gray' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 10px center; background-size: 1em;
+    }
+
+    #todayBtn { padding: 8px 15px; border-radius: 12px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer; font-weight: 600; transition: 0.2s; }
+    #todayBtn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+    #periodRibbon { margin: 0 auto 30px auto; display: flex; justify-content: center; gap: 8px; padding: 5px; background: var(--ribbon-bg); width: fit-content; border-radius: 30px; flex-wrap: wrap; }
     .period-btn { padding: 10px 20px; border: none; background: transparent; border-radius: 25px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--sub-text); transition: 0.3s; }
     .period-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(0,123,255,0.4); }
 
-    /* Stats Section */
-    .stats-section { margin-bottom: 30px; }
-    .stats-row { display: flex; justify-content: center; gap: 20px; margin-bottom: 15px; }
+    .stats-section { margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+    .stats-row { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; width: 100%; }
     .stat-card {
       background: var(--card-bg); padding: 15px 25px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      text-align: center; min-width: 240px; border: 1px solid var(--border);
+      text-align: center; min-width: 280px; border: 1px solid var(--border); transition: transform 0.2s;
     }
     .stat-card.min { border-bottom: 4px solid var(--min-color); }
     .stat-card.max { border-bottom: 4px solid var(--max-color); }
-    .stat-card.monthly { opacity: 0.85; transform: scale(0.95); }
+    .stat-card.monthly { opacity: 0.7; transform: scale(0.95); box-shadow: none; }
     .stat-value { font-size: 1.8rem; font-weight: 700; display: block; }
-    .stat-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--sub-text); }
+    .stat-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--sub-text); letter-spacing: 0.5px; }
 
-    #map { height: 420px; width: 92%; max-width: 1200px; margin: 0 auto 35px auto; border-radius: 25px; box-shadow: 0 15px 45px rgba(0,0,0,0.3); background: var(--card-bg); filter: invert(var(--map-invert)) hue-rotate(180deg) brightness(0.9); border: 1px solid var(--border); }
-    #plots { display: flex; justify-content: center; padding: 0 4%; flex-wrap: wrap; gap: 25px; margin-bottom: 60px; }
-    #boxDiv, #lineDiv { background: var(--card-bg); padding: 20px; border-radius: 25px; width: 46%; height: 450px; min-width: 420px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); border: 1px solid var(--border); }
-
-    .input-group { display: flex; align-items: center; gap: 10px; }
-    input { background: var(--card-bg); color: var(--text); padding: 8px; border: 1px solid var(--border); border-radius: 12px; width: 60px; text-align: center; outline: none; }
+    .switch-container { display: flex; align-items: center; gap: 12px; }
+    .unit-label { font-weight: 700; transition: color 0.3s ease; font-size: 0.9rem; }
     .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 34px; }
     .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider { background-color: #ccc; }
     input:checked + .slider:before { transform: translateX(24px); }
+
+    #map { height: 420px; width: 92%; max-width: 1200px; margin: 0 auto 35px auto; border-radius: 25px; box-shadow: 0 15px 45px rgba(0,0,0,0.3); background: var(--card-bg); filter: invert(var(--map-invert)) hue-rotate(180deg) brightness(0.9); border: 1px solid var(--border); }
+    #plots { display: flex; justify-content: center; padding: 0 4%; flex-wrap: wrap; gap: 25px; margin-bottom: 60px; }
+    #boxDiv, #lineDiv { background: var(--card-bg); padding: 20px; border-radius: 25px; width: 46%; height: 450px; min-width: 400px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); border: 1px solid var(--border); }
+
+    .input-group { display: flex; align-items: center; gap: 8px; }
+    .input-group label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--sub-text); }
+
+    @media (max-width: 900px) {
+      #boxDiv, #lineDiv { width: 95%; min-width: unset; }
+      .stat-card { min-width: 240px; }
+    }
   </style>
 </head>
 <body>
 
 <h2 class="top-header">Climate Analytics Dashboard</h2>
-<div id="stationHeader">Select a station marker</div>
+<div id="stationHeader">Select a station marker to begin</div>
 
 <div id="controls">
-  <div class="input-group"><label>Month</label><input type="number" id="month" min="1" max="12"></div>
-  <div class="input-group"><label>Day</label><input type="number" id="day" min="1" max="31"></div>
+  <div class="input-group">
+    <label>Month</label>
+    <select id="month">
+      <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+      <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+      <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+      <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+    </select>
+  </div>
+  <div class="input-group">
+    <label>Day</label>
+    <select id="day"></select>
+  </div>
+  <button id="todayBtn">Today</button>
   <div class="switch-container">
-    <span style="color:var(--sub-text)">°C</span>
-    <label class="switch"><input type="checkbox" id="unitToggle"><span class="slider"></span></label>
-    <span style="color:var(--primary)">°F</span>
+    <span id="labelC" class="unit-label">°C</span>
+    <label class="switch">
+      <input type="checkbox" id="unitToggle" checked>
+      <span class="slider"></span>
+    </label>
+    <span id="labelF" class="unit-label">°F</span>
   </div>
 </div>
 
@@ -108,29 +151,61 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const today = new Date();
-  document.getElementById('month').value = today.getMonth() + 1;
-  document.getElementById('day').value = today.getDate();
-
   let lastStation = null, rawMonthData = null, currentRange = { start: 1991, end: 2020 };
+  const colorMax = '#ff7675', colorMin = '#74b9ff';
+
+  function populateDays(selectedDay = null) {
+    const month = parseInt(document.getElementById('month').value);
+    const daySelect = document.getElementById('day');
+    const daysInMonth = new Date(2024, month, 0).getDate();
+    const prevVal = selectedDay || parseInt(daySelect.value) || 1;
+    daySelect.innerHTML = '';
+    for (let i = 1; i <= daysInMonth; i++) {
+      const opt = document.createElement('option');
+      opt.value = i; opt.innerHTML = i;
+      if (i === prevVal || (i === daysInMonth && prevVal > daysInMonth)) opt.selected = true;
+      daySelect.appendChild(opt);
+    }
+  }
+
+  function updateToggleLabels() {
+    const isF = document.getElementById('unitToggle').checked;
+    document.getElementById('labelF').style.color = isF ? 'var(--primary)' : 'var(--sub-text)';
+    document.getElementById('labelC').style.color = isF ? 'var(--sub-text)' : 'var(--primary)';
+  }
+
+  const now = new Date();
+  document.getElementById('month').value = now.getMonth() + 1;
+  populateDays(now.getDate());
   document.getElementById('defaultPeriod').classList.add('active');
+  updateToggleLabels();
 
   const map = L.map('map').setView([35.5, -80], 7);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
 
   Papa.parse('data/stations.csv', {
     download: true, header: true, skipEmptyLines: true,
     complete: function(results) {
-      results.data.forEach(station => {
-        if(!station.lat || !station.lon) return;
-        L.marker([parseFloat(station.lat), parseFloat(station.lon)]).addTo(map).bindTooltip(station.name)
+      results.data.forEach(st => {
+        if(!st.lat || !st.lon) return;
+        L.marker([parseFloat(st.lat), parseFloat(st.lon)]).addTo(map).bindTooltip(st.name)
          .on('click', () => { 
-           lastStation = station; 
-           document.getElementById('stationHeader').innerHTML = `Station: <span style="color:var(--text)">${station.name}</span>`;
+           lastStation = st; 
+           document.getElementById('stationHeader').innerHTML = `Station: <span style="color:var(--text)">${st.name}</span>`;
            triggerDataFetch(); 
          });
       });
     }
+  });
+
+  document.getElementById('month').addEventListener('change', () => { populateDays(); triggerDataFetch(); });
+  document.getElementById('day').addEventListener('change', triggerDataFetch);
+  document.getElementById('unitToggle').addEventListener('change', () => { updateToggleLabels(); processAndPlot(); });
+  document.getElementById('todayBtn').addEventListener('click', () => {
+    const d = new Date();
+    document.getElementById('month').value = d.getMonth() + 1;
+    populateDays(d.getDate());
+    triggerDataFetch();
   });
 
   document.querySelectorAll('.period-btn').forEach(btn => {
@@ -143,26 +218,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  document.getElementById('month').addEventListener('change', triggerDataFetch);
-  document.getElementById('day').addEventListener('change', triggerDataFetch);
-  document.getElementById('unitToggle').addEventListener('change', processAndPlot);
-
   function triggerDataFetch() {
     if (!lastStation) return;
     const mReq = parseInt(document.getElementById('month').value);
     Papa.parse(`data/daily/${lastStation.station}.csv`, {
       download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
       complete: function(results) {
-        // We now store the entire MONTH of data
-        rawMonthData = results.data.filter(d => {
-          if (!d.DATE) return false;
-          return parseInt(d.DATE.split('-')[1]) === mReq;
-        }).map(r => ({
-          year: parseInt(r.DATE.split('-')[0]),
-          day: parseInt(r.DATE.split('-')[2]),
-          tmax: (r.TMAX != null) ? r.TMAX/10 : null,
-          tmin: (r.TMIN != null) ? r.TMIN/10 : null
-        }));
+        rawMonthData = results.data.filter(d => d.DATE && parseInt(d.DATE.split('-')[1]) === mReq)
+          .map(r => ({
+            year: parseInt(r.DATE.split('-')[0]),
+            day: parseInt(r.DATE.split('-')[2]),
+            tmax: (r.TMAX != null) ? r.TMAX/10 : null,
+            tmin: (r.TMIN != null) ? r.TMIN/10 : null
+          }));
         processAndPlot();
       }
     });
@@ -175,47 +243,46 @@ document.addEventListener('DOMContentLoaded', function() {
     const unit = isF ? "°F" : "°C";
     const convert = (v) => (v == null ? null : (isF ? (v * 9/5 + 32) : v));
 
-    // 1. Filter all data for the chosen period
     const periodData = rawMonthData.filter(d => d.year >= currentRange.start && d.year <= currentRange.end);
-    
-    // 2. Separate Daily vs Monthly averages
     const dailyRows = periodData.filter(d => d.day === dReq);
     
     const tmaxDaily = dailyRows.map(r => convert(r.tmax)).filter(v => v !== null);
     const tminDaily = dailyRows.map(r => convert(r.tmin)).filter(v => v !== null);
-    
-    const tmaxMonth = periodData.map(r => convert(r.tmax)).filter(v => v !== null);
-    const tminMonth = periodData.map(r => convert(r.tmin)).filter(v => v !== null);
+    const tmaxMon = periodData.map(r => convert(r.tmax)).filter(v => v !== null);
+    const tminMon = periodData.map(r => convert(r.tmin)).filter(v => v !== null);
 
     const getAvg = (arr) => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : "--";
-
     document.getElementById('avgMax').textContent = getAvg(tmaxDaily) + unit;
     document.getElementById('avgMin').textContent = getAvg(tminDaily) + unit;
-    document.getElementById('monMax').textContent = getAvg(tmaxMonth) + unit;
-    document.getElementById('monMin').textContent = getAvg(tminMonth) + unit;
-
-    if(dailyRows.length === 0) return;
+    document.getElementById('monMax').textContent = getAvg(tmaxMon) + unit;
+    document.getElementById('monMin').textContent = getAvg(tminMon) + unit;
 
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const layout = { 
+    const baseLayout = { 
       paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-      font: { color: isDark ? "#e0e0e0" : "#2d3436" },
+      font: { color: isDark ? "#e0e0e0" : "#2d3436", family: 'Segoe UI' },
       yaxis: { title: unit, gridcolor: isDark ? "#333" : "#f1f2f6", zeroline: false }, 
-      xaxis: { title: "Year", gridcolor: isDark ? "#333" : "#f1f2f6", zeroline: false },
       margin: { t: 40, b: 40, l: 60, r: 20 }, legend: { orientation: 'h', y: -0.2 },
       template: isDark ? 'plotly_dark' : 'plotly_white'
     };
 
-    Plotly.newPlot('boxDiv', [
-      { y: tminDaily, type:'box', name:'Min', marker: {color: '#74b9ff'}, boxpoints:'all', jitter:0.3 },
-      { y: tmaxDaily, type:'box', name:'Max', marker: {color: '#ff7675'}, boxpoints:'all', jitter:0.3 }
-    ], { ...layout, title: "<b>Daily Distribution</b>" });
+    if(dailyRows.length > 0) {
+      const boxLayout = { ...baseLayout, title: "<b>Daily Distribution</b>", xaxis: { title: "", gridcolor: isDark ? "#333" : "#f1f2f6", zeroline: false } };
+      Plotly.newPlot('boxDiv', [
+        { y: tminDaily, type:'box', name:'Min', marker: {color: colorMin}, boxpoints:'all', jitter:0.3 },
+        { y: tmaxDaily, type:'box', name:'Max', marker: {color: colorMax}, boxpoints:'all', jitter:0.3 }
+      ], boxLayout);
 
-    Plotly.newPlot('lineDiv', [
-      { x: dailyRows.map(r => r.year), y: tminDaily, type:'scatter', mode:'lines+markers', name:'Min', line: {color: '#74b9ff', width: 3} },
-      { x: dailyRows.map(r => r.year), y: tmaxDaily, type:'scatter', mode:'lines+markers', name:'Max', line: {color: '#ff7675', width: 3} }
-    ], { ...layout, title: "<b>Historical Daily Trend</b>" });
+      const lineLayout = { ...baseLayout, title: "<b>Historical Daily Trend</b>", xaxis: { title: "Year", gridcolor: isDark ? "#333" : "#f1f2f6", zeroline: false } };
+      Plotly.newPlot('lineDiv', [
+        { x: dailyRows.map(r => r.year), y: tminDaily, type:'scatter', mode:'lines+markers', name:'Min', line: {color: colorMin, width: 3} },
+        { x: dailyRows.map(r => r.year), y: tmaxDaily, type:'scatter', mode:'lines+markers', name:'Max', line: {color: colorMax, width: 3} }
+      ], lineLayout);
+    }
   }
+
+  window.addEventListener('resize', () => { Plotly.Plots.resize('boxDiv'); Plotly.Plots.resize('lineDiv'); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', processAndPlot);
 });
 </script>
 </body>
