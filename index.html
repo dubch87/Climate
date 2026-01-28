@@ -5,119 +5,112 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Climate Analytics Dashboard</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #007bff;
-      --bg: #f8f9fa;
-      --card-bg: #ffffff;
-      --text: #2d3436;
-      --sub-text: #95a5a6;
-      --max-color: #ff7675;
-      --min-color: #74b9ff;
-      --border: #dfe6e9;
-      --ribbon-bg: #e9ecef;
-      --map-invert: 0;
+      --primary: #007bff; --bg: #f8f9fa; --card-bg: #ffffff; --text: #2d3436;
+      --sub-text: #636e72; --max-color: #ff7675; --min-color: #74b9ff;
+      --border: #dfe6e9; --ribbon-bg: #e9ecef; --map-invert: 0;
     }
-
     @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #121212; 
-        --card-bg: #1e1e1e; 
-        --text: #e0e0e0; 
-        --sub-text: #a0a0a0;
-        --border: #333; 
-        --ribbon-bg: #2d2d2d; 
-        --map-invert: 0.9;
-      }
+      :root { --bg: #121212; --card-bg: #1e1e1e; --text: #e0e0e0; --sub-text: #a0a0a0; --border: #333; --ribbon-bg: #2d2d2d; --map-invert: 0.9; }
     }
 
-    body { margin:0; padding:0; font-family:'Segoe UI', system-ui, sans-serif; background-color: var(--bg); color: var(--text); transition: background 0.3s; overflow-x: hidden; }
+    body { margin:0; padding:0; font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); overflow-x: hidden; }
+    .top-header { text-align: center; margin: 30px 0 5px 0; font-weight: 300; font-size: 1.8rem; letter-spacing: -0.5px; }
+    #stationHeader { text-align: center; margin-bottom: 20px; color: var(--primary); font-weight: 600; font-size: 1.1rem; min-height: 1.6em; }
     
-    .top-header { text-align: center; margin: 30px 0 5px 0; font-weight: 300; font-size: 2rem; }
-    #stationHeader { text-align: center; margin-bottom: 20px; color: var(--primary); font-weight: 600; font-size: 1.5rem; min-height: 1.6em; }
-    
+    #map { 
+      height: 400px; width: 92%; max-width: 1200px; margin: 0 auto 25px auto; 
+      border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+      border: 1px solid var(--border);
+      filter: invert(var(--map-invert)) hue-rotate(180deg) brightness(0.9);
+    }
+
     #controls { 
-      margin: 0 auto 15px auto; padding: 15px 30px; background: var(--card-bg); border-radius: 50px; 
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; gap: 20px; align-items: center; justify-content: center; 
-      width: fit-content; border: 1px solid var(--border); flex-wrap: wrap;
+      margin: 0 auto 25px auto; padding: 10px 20px; background: var(--card-bg); border-radius: 50px; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; gap: 20px; align-items: center; justify-content: center; 
+      width: fit-content; border: 1px solid var(--border); flex-wrap: nowrap;
     }
 
-    select {
-      background: var(--card-bg); color: var(--text); padding: 8px 30px 8px 12px; border: 1px solid var(--border);
-      border-radius: 12px; font-size: 1rem; outline: none; cursor: pointer; appearance: none;
-      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='gray' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-      background-repeat: no-repeat; background-position: right 10px center; background-size: 1em;
+    .search-container { position: relative; width: 240px; flex-shrink: 0; display: flex; align-items: center; }
+    #stationSearch { 
+        width: 100%; padding: 8px 35px 8px 15px; border-radius: 20px; border: 1px solid var(--border); 
+        background: var(--bg); color: var(--text); font-family: inherit; outline: none; font-size: 0.85rem; box-sizing: border-box;
     }
-
-    #todayBtn { padding: 8px 15px; border-radius: 12px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer; font-weight: 600; transition: 0.2s; }
-    #todayBtn:hover { background: var(--primary); color: white; border-color: var(--primary); }
-
-    #periodRibbon { margin: 0 auto 30px auto; display: flex; justify-content: center; gap: 8px; padding: 5px; background: var(--ribbon-bg); width: fit-content; border-radius: 30px; flex-wrap: wrap; }
-    .period-btn { padding: 10px 20px; border: none; background: transparent; border-radius: 25px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--sub-text); transition: 0.3s; }
-    .period-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(0,123,255,0.4); }
-
-    .stats-section { margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
-    .stats-row { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; width: 100%; }
-    .stat-card {
-      background: var(--card-bg); padding: 15px 25px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      text-align: center; min-width: 280px; border: 1px solid var(--border); transition: transform 0.2s;
+    #clearSearch {
+        position: absolute; right: 10px; cursor: pointer; color: var(--sub-text); font-weight: 800;
+        display: none; user-select: none; font-size: 1.1rem; line-height: 1;
     }
-    .stat-card.min { border-bottom: 4px solid var(--min-color); }
-    .stat-card.max { border-bottom: 4px solid var(--max-color); }
-    .stat-card.monthly { opacity: 0.7; transform: scale(0.95); box-shadow: none; }
-    .stat-value { font-size: 1.8rem; font-weight: 700; display: block; }
-    .stat-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--sub-text); letter-spacing: 0.5px; }
+    #clearSearch:hover { color: var(--max-color); }
 
-    .switch-container { display: flex; align-items: center; gap: 12px; }
-    .unit-label { font-weight: 700; transition: color 0.3s ease; font-size: 0.9rem; }
-    .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+    #searchResults { 
+        position: absolute; top: 42px; left: 0; width: 320px; background: var(--card-bg); 
+        border: 1px solid var(--border); border-radius: 12px; max-height: 250px; overflow-y: auto; 
+        z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: none;
+    }
+    .search-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 0.8rem; text-align: left; }
+    .search-item:hover { background: var(--ribbon-bg); color: var(--primary); }
+    .state-badge { float: right; background: var(--ribbon-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; color: var(--sub-text); }
+
+    .dropdown-group { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+    select, #todayBtn { background: var(--bg); color: var(--text); padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; font-family: inherit; cursor: pointer; }
+
+    #periodRibbon { margin: 0 auto 30px auto; display: flex; justify-content: center; gap: 5px; padding: 4px; background: var(--ribbon-bg); width: fit-content; border-radius: 30px; }
+    .period-btn { padding: 8px 16px; border: none; background: transparent; border-radius: 25px; cursor: pointer; font-size: 0.75rem; font-weight: 600; color: var(--sub-text); font-family: inherit; }
+    .period-btn.active { background: var(--primary); color: white; }
+
+    .stats-section { margin-bottom: 40px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .stats-row { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; width: 100%; }
+    .stat-card { background: var(--card-bg); padding: 20px; border-radius: 12px; text-align: center; width: 320px; border: 1px solid var(--border); }
+    .stat-card.daily { border: 2px solid var(--border); border-bottom-width: 5px; }
+    .stat-card.min { border-bottom-color: var(--min-color); }
+    .stat-card.max { border-bottom-color: var(--max-color); }
+    .stat-value { font-size: 1.8rem; font-weight: 800; display: block; margin-top: 6px; }
+    .stat-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--sub-text); letter-spacing: 0.8px; line-height: 1.4; display: block; min-height: 2.8em; }
+
+    .switch { position: relative; display: inline-block; width: 36px; height: 18px; margin: 0 6px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 34px; }
-    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: #ccc; }
-    input:checked + .slider:before { transform: translateX(24px); }
+    .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider:before { transform: translateX(18px); }
 
-    #map { height: 420px; width: 92%; max-width: 1200px; margin: 0 auto 35px auto; border-radius: 25px; box-shadow: 0 15px 45px rgba(0,0,0,0.3); background: var(--card-bg); filter: invert(var(--map-invert)) hue-rotate(180deg) brightness(0.9); border: 1px solid var(--border); }
-    #plots { display: flex; justify-content: center; padding: 0 4%; flex-wrap: wrap; gap: 25px; margin-bottom: 60px; }
-    #boxDiv, #lineDiv { background: var(--card-bg); padding: 20px; border-radius: 25px; width: 46%; height: 450px; min-width: 400px; box-shadow: 0 8px 30px rgba(0,0,0,0.1); border: 1px solid var(--border); }
-
-    .input-group { display: flex; align-items: center; gap: 8px; }
-    .input-group label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--sub-text); }
-
-    @media (max-width: 900px) {
-      #boxDiv, #lineDiv { width: 95%; min-width: unset; }
-      .stat-card { min-width: 240px; }
-    }
+    #plots { display: flex; justify-content: center; padding: 0 4%; flex-wrap: wrap; gap: 20px; margin-bottom: 60px; }
+    #boxDiv, #lineDiv { background: var(--card-bg); padding: 15px; border-radius: 20px; width: 46%; height: 400px; min-width: 380px; border: 1px solid var(--border); }
   </style>
 </head>
 <body>
 
 <h2 class="top-header">Climate Analytics Dashboard</h2>
-<div id="stationHeader">Select a station marker to begin</div>
+<div id="stationHeader">Select a station marker on the map or search to begin.</div>
+
+<div id="map"></div>
 
 <div id="controls">
-  <div class="input-group">
-    <label>Month</label>
-    <select id="month">
-      <option value="1">January</option><option value="2">February</option><option value="3">March</option>
-      <option value="4">April</option><option value="5">May</option><option value="6">June</option>
-      <option value="7">July</option><option value="8">August</option><option value="9">September</option>
-      <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-    </select>
-  </div>
-  <div class="input-group">
-    <label>Day</label>
-    <select id="day"></select>
-  </div>
-  <button id="todayBtn">Today</button>
-  <div class="switch-container">
-    <span id="labelC" class="unit-label">°C</span>
-    <label class="switch">
-      <input type="checkbox" id="unitToggle" checked>
-      <span class="slider"></span>
-    </label>
-    <span id="labelF" class="unit-label">°F</span>
-  </div>
+    <div class="search-container">
+        <input type="text" id="stationSearch" placeholder="Search station name or ID...">
+        <span id="clearSearch">&times;</span>
+        <div id="searchResults"></div>
+    </div>
+    
+    <div class="dropdown-group">
+        <select id="month">
+            <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+            <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+            <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+        </select>
+        <select id="day"></select>
+        <button id="todayBtn">Today</button>
+    </div>
+
+    <div style="display:flex; align-items:center; border-left:1px solid var(--border); padding-left:15px; flex-shrink:0;">
+        <span style="font-size:0.7rem; font-weight:700">°C</span>
+        <label class="switch"><input type="checkbox" id="unitToggle" checked><span class="slider"></span></label>
+        <span style="font-size:0.7rem; font-weight:700">°F</span>
+    </div>
 </div>
 
 <div id="periodRibbon">
@@ -130,29 +123,118 @@
 
 <div class="stats-section">
   <div class="stats-row">
-    <div class="stat-card min"><span class="stat-label">Daily Average Minimum Temperature</span><span class="stat-value" id="avgMin">--</span></div>
-    <div class="stat-card max"><span class="stat-label">Daily Average Maximum Temperature</span><span class="stat-value" id="avgMax">--</span></div>
+    <div class="stat-card min daily"><span class="stat-label" id="dayMinLabel">Average Minimum Temperature</span><span class="stat-value" id="avgMin">--</span></div>
+    <div class="stat-card max daily"><span class="stat-label" id="dayMaxLabel">Average Maximum Temperature</span><span class="stat-value" id="avgMax">--</span></div>
   </div>
   <div class="stats-row">
-    <div class="stat-card min monthly"><span class="stat-label">Monthly Average Minimum Temperature</span><span class="stat-value" id="monMin">--</span></div>
-    <div class="stat-card max monthly"><span class="stat-label">Monthly Average Maximum Temperature</span><span class="stat-value" id="monMax">--</span></div>
+    <div class="stat-card min"><span class="stat-label" id="monMinLabel">Average Minimum Temperature</span><span class="stat-value" id="monMin">--</span></div>
+    <div class="stat-card max"><span class="stat-label" id="monMaxLabel">Average Maximum Temperature</span><span class="stat-value" id="monMax">--</span></div>
+  </div>
+  <div class="stats-row" id="currentMonthRow" style="display:none;">
+    <div class="stat-card min"><span class="stat-label" id="curMinLabel">Current Month Average Min</span><span class="stat-value" id="curMin">--</span></div>
+    <div class="stat-card max"><span class="stat-label" id="curMaxLabel">Current Month Average Max</span><span class="stat-value" id="curMax">--</span></div>
   </div>
 </div>
 
-<div id="map"></div>
 <div id="plots">
   <div id="boxDiv"></div>
   <div id="lineDiv"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-2.24.2.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  let lastStation = null, rawMonthData = null, currentRange = { start: 1991, end: 2020 };
-  const colorMax = '#ff7675', colorMin = '#74b9ff';
+  let lastStation = null, fullDataset = null, allStations = [], currentRange = { start: 1991, end: 2020 };
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+  const map = L.map('map', { zoomSnap: 0.5 }).setView([35.5, -80], 7);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
+  const markers = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40 });
+
+  function getStationStyles(id) {
+    if (id.startsWith('USC')) return { fill: 'rgba(16, 172, 132, 0.3)', stroke: '#10ac84' };
+    if (id.startsWith('USR')) return { fill: 'rgba(243, 156, 18, 0.3)', stroke: '#f39c12' };
+    if (id.startsWith('USW')) return { fill: 'rgba(46, 134, 222, 0.3)', stroke: '#2e86de' };
+    return { fill: 'rgba(149, 165, 166, 0.3)', stroke: '#95a5a6' };
+  }
+
+  Papa.parse('data/stations.csv', {
+    download: true, header: true, skipEmptyLines: true,
+    complete: function(results) {
+      allStations = results.data;
+      allStations.forEach(st => {
+        if(!st.lat || !st.lon) return;
+        const styles = getStationStyles(st.station);
+        const dot = L.circleMarker([parseFloat(st.lat), parseFloat(st.lon)], {
+          radius: 6, fillColor: styles.fill, color: styles.stroke, weight: 2, opacity: 1, fillOpacity: 1
+        });
+        dot.bindTooltip(`${st.name}, ${st.state || ''}`);
+        dot.on('click', () => selectStation(st));
+        markers.addLayer(dot);
+      });
+      map.addLayer(markers);
+    }
+  });
+
+  const searchInput = document.getElementById('stationSearch');
+  const searchResults = document.getElementById('searchResults');
+  const clearBtn = document.getElementById('clearSearch');
+
+  searchInput.addEventListener('input', (e) => {
+    const val = e.target.value.toLowerCase();
+    clearBtn.style.display = val.length > 0 ? 'block' : 'none';
+    searchResults.innerHTML = '';
+    if (val.length < 2) { searchResults.style.display = 'none'; return; }
+    
+    // EXCLUDES state-only matching now to avoid 15-result clutter
+    const filtered = allStations.filter(s => 
+        s.name.toLowerCase().includes(val) || 
+        s.station.toLowerCase().includes(val)
+    ).slice(0, 15);
+
+    if (filtered.length > 0) {
+        filtered.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'search-item';
+            div.innerHTML = `<span class="state-badge">${s.state || '--'}</span><strong>${s.name}</strong> <br><small style="color:var(--sub-text)">${s.station}</small>`;
+            div.onclick = () => { selectStation(s); searchResults.style.display = 'none'; searchInput.value = ''; clearBtn.style.display = 'none'; };
+            searchResults.appendChild(div);
+        });
+        searchResults.style.display = 'block';
+    } else { searchResults.style.display = 'none'; }
+  });
+
+  clearBtn.onclick = () => { searchInput.value = ''; clearBtn.style.display = 'none'; searchResults.style.display = 'none'; searchInput.focus(); };
+
+  function selectStation(st) {
+    lastStation = st;
+    map.setView([st.lat, st.lon], 11);
+    triggerDataFetch();
+  }
+
+  function triggerDataFetch() {
+    if (!lastStation) return;
+    const statePath = (lastStation.state || 'UNK').toUpperCase();
+    const filePath = `data/daily/${statePath}/${lastStation.station}.csv`;
+
+    Papa.parse(filePath, {
+      download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
+      complete: function(results) {
+        fullDataset = results.data;
+        const years = fullDataset.filter(d => d.DATE).map(d => parseInt(d.DATE.split('-')[0]));
+        document.getElementById('stationHeader').innerHTML = 
+          `Station: <span style="color:var(--text)">${lastStation.name}, ${lastStation.state}</span> <span style="font-size:0.85rem; color:var(--sub-text); font-weight:400">(${Math.min(...years)}-${Math.max(...years)})</span>`;
+        processAndPlot();
+      },
+      error: function() {
+        document.getElementById('stationHeader').innerHTML = `<span style="color:var(--max-color)">Error: Data not found in /${statePath}/${lastStation.station}.csv</span>`;
+      }
+    });
+  }
 
   function populateDays(selectedDay = null) {
     const month = parseInt(document.getElementById('month').value);
@@ -168,39 +250,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function updateToggleLabels() {
-    const isF = document.getElementById('unitToggle').checked;
-    document.getElementById('labelF').style.color = isF ? 'var(--primary)' : 'var(--sub-text)';
-    document.getElementById('labelC').style.color = isF ? 'var(--sub-text)' : 'var(--primary)';
-  }
-
   const now = new Date();
   document.getElementById('month').value = now.getMonth() + 1;
   populateDays(now.getDate());
   document.getElementById('defaultPeriod').classList.add('active');
-  updateToggleLabels();
-
-  const map = L.map('map').setView([35.5, -80], 7);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
-
-  Papa.parse('data/stations.csv', {
-    download: true, header: true, skipEmptyLines: true,
-    complete: function(results) {
-      results.data.forEach(st => {
-        if(!st.lat || !st.lon) return;
-        L.marker([parseFloat(st.lat), parseFloat(st.lon)]).addTo(map).bindTooltip(st.name)
-         .on('click', () => { 
-           lastStation = st; 
-           document.getElementById('stationHeader').innerHTML = `Station: <span style="color:var(--text)">${st.name}</span>`;
-           triggerDataFetch(); 
-         });
-      });
-    }
-  });
 
   document.getElementById('month').addEventListener('change', () => { populateDays(); triggerDataFetch(); });
   document.getElementById('day').addEventListener('change', triggerDataFetch);
-  document.getElementById('unitToggle').addEventListener('change', () => { updateToggleLabels(); processAndPlot(); });
+  document.getElementById('unitToggle').addEventListener('change', processAndPlot);
   document.getElementById('todayBtn').addEventListener('click', () => {
     const d = new Date();
     document.getElementById('month').value = d.getMonth() + 1;
@@ -218,71 +275,75 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  function triggerDataFetch() {
-    if (!lastStation) return;
-    const mReq = parseInt(document.getElementById('month').value);
-    Papa.parse(`data/daily/${lastStation.station}.csv`, {
-      download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
-      complete: function(results) {
-        rawMonthData = results.data.filter(d => d.DATE && parseInt(d.DATE.split('-')[1]) === mReq)
-          .map(r => ({
-            year: parseInt(r.DATE.split('-')[0]),
-            day: parseInt(r.DATE.split('-')[2]),
-            tmax: (r.TMAX != null) ? r.TMAX/10 : null,
-            tmin: (r.TMIN != null) ? r.TMIN/10 : null
-          }));
-        processAndPlot();
-      }
-    });
-  }
-
   function processAndPlot() {
-    if (!rawMonthData) return;
+    if (!fullDataset) return;
+    const mIdx = parseInt(document.getElementById('month').value);
     const dReq = parseInt(document.getElementById('day').value);
     const isF = document.getElementById('unitToggle').checked;
     const unit = isF ? "°F" : "°C";
     const convert = (v) => (v == null ? null : (isF ? (v * 9/5 + 32) : v));
+    const monthName = monthNames[mIdx - 1];
+
+    // Get year range text for titles
+    const yearRangeText = currentRange.start === 0 ? "All History" : `${currentRange.start}-${currentRange.end}`;
+    
+    document.getElementById('dayMinLabel').textContent = `${monthName} ${dReq} Average Minimum Temperature`;
+    document.getElementById('dayMaxLabel').textContent = `${monthName} ${dReq} Average Maximum Temperature`;
+    document.getElementById('monMinLabel').textContent = `${monthName} Average Minimum Temperature`;
+    document.getElementById('monMaxLabel').textContent = `${monthName} Average Maximum Temperature`;
+
+    const rawMonthData = fullDataset.filter(d => d.DATE && parseInt(d.DATE.split('-')[1]) === mIdx)
+      .map(r => ({
+        year: parseInt(r.DATE.split('-')[0]),
+        day: parseInt(r.DATE.split('-')[2]),
+        tmax: (r.TMAX != null) ? r.TMAX/10 : null,
+        tmin: (r.TMIN != null) ? r.TMIN/10 : null
+      }));
 
     const periodData = rawMonthData.filter(d => d.year >= currentRange.start && d.year <= currentRange.end);
     const dailyRows = periodData.filter(d => d.day === dReq);
-    
-    const tmaxDaily = dailyRows.map(r => convert(r.tmax)).filter(v => v !== null);
-    const tminDaily = dailyRows.map(r => convert(r.tmin)).filter(v => v !== null);
-    const tmaxMon = periodData.map(r => convert(r.tmax)).filter(v => v !== null);
-    const tminMon = periodData.map(r => convert(r.tmin)).filter(v => v !== null);
-
     const getAvg = (arr) => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : "--";
-    document.getElementById('avgMax').textContent = getAvg(tmaxDaily) + unit;
-    document.getElementById('avgMin').textContent = getAvg(tminDaily) + unit;
-    document.getElementById('monMax').textContent = getAvg(tmaxMon) + unit;
-    document.getElementById('monMin').textContent = getAvg(tminMon) + unit;
+    
+    document.getElementById('avgMax').textContent = getAvg(dailyRows.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
+    document.getElementById('avgMin').textContent = getAvg(dailyRows.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
+    document.getElementById('monMax').textContent = getAvg(periodData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
+    document.getElementById('monMin').textContent = getAvg(periodData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
+
+    const today = new Date();
+    const realM = today.getMonth() + 1;
+    const curRow = document.getElementById('currentMonthRow');
+    if (mIdx === realM) {
+        const curMatch = fullDataset.filter(d => d.DATE.startsWith(`${today.getFullYear()}-${String(realM).padStart(2,'0')}`));
+        if (curMatch.length > 0) {
+            curRow.style.display = 'flex';
+            document.getElementById('curMinLabel').textContent = `${monthNames[realM-1]} ${today.getFullYear()} Average Min`;
+            document.getElementById('curMaxLabel').textContent = `${monthNames[realM-1]} ${today.getFullYear()} Average Max`;
+            document.getElementById('curMax').textContent = getAvg(curMatch.map(r => convert(r.TMAX/10)).filter(v => !isNaN(v))) + unit;
+            document.getElementById('curMin').textContent = getAvg(curMatch.map(r => convert(r.TMIN/10)).filter(v => !isNaN(v))) + unit;
+        } else { curRow.style.display = 'none'; }
+    } else { curRow.style.display = 'none'; }
 
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const baseLayout = { 
       paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-      font: { color: isDark ? "#e0e0e0" : "#2d3436", family: 'Segoe UI' },
+      font: { color: isDark ? "#e0e0e0" : "#2d3436", family: 'Inter, sans-serif', size: 10 },
       yaxis: { title: unit, gridcolor: isDark ? "#333" : "#f1f2f6", zeroline: false }, 
-      margin: { t: 40, b: 40, l: 60, r: 20 }, legend: { orientation: 'h', y: -0.2 },
-      template: isDark ? 'plotly_dark' : 'plotly_white'
+      margin: { t: 60, b: 40, l: 40, r: 20 }, template: isDark ? 'plotly_dark' : 'plotly_white'
     };
 
     if(dailyRows.length > 0) {
-      const boxLayout = { ...baseLayout, title: "<b>Daily Distribution</b>", xaxis: { title: "", gridcolor: isDark ? "#333" : "#f1f2f6", zeroline: false } };
       Plotly.newPlot('boxDiv', [
-        { y: tminDaily, type:'box', name:'Min', marker: {color: colorMin}, boxpoints:'all', jitter:0.3 },
-        { y: tmaxDaily, type:'box', name:'Max', marker: {color: colorMax}, boxpoints:'all', jitter:0.3 }
-      ], boxLayout);
+        { y: dailyRows.map(r => convert(r.tmin)).filter(v => v !== null), type:'box', name:'Min', marker: {color: '#74b9ff'}, boxpoints:'all', jitter:0.3 },
+        { y: dailyRows.map(r => convert(r.tmax)).filter(v => v !== null), type:'box', name:'Max', marker: {color: '#ff7675'}, boxpoints:'all', jitter:0.3 }
+      ], { ...baseLayout, title: `<b>${monthName} ${dReq} Distribution</b><br><span style="font-size:0.75rem">(${yearRangeText})</span>` });
 
-      const lineLayout = { ...baseLayout, title: "<b>Historical Daily Trend</b>", xaxis: { title: "Year", gridcolor: isDark ? "#333" : "#f1f2f6", zeroline: false } };
       Plotly.newPlot('lineDiv', [
-        { x: dailyRows.map(r => r.year), y: tminDaily, type:'scatter', mode:'lines+markers', name:'Min', line: {color: colorMin, width: 3} },
-        { x: dailyRows.map(r => r.year), y: tmaxDaily, type:'scatter', mode:'lines+markers', name:'Max', line: {color: colorMax, width: 3} }
-      ], lineLayout);
+        { x: dailyRows.map(r => r.year), y: dailyRows.map(r => convert(r.tmin)).filter(v => v !== null), type:'scatter', mode:'lines+markers', name:'Min', line: {color: '#74b9ff', width: 2} },
+        { x: dailyRows.map(r => r.year), y: dailyRows.map(r => convert(r.tmax)).filter(v => v !== null), type:'scatter', mode:'lines+markers', name:'Max', line: {color: '#ff7675', width: 2} }
+      ], { ...baseLayout, title: `<b>Historical ${monthName} ${dReq} Trend</b><br><span style="font-size:0.75rem">(${yearRangeText})</span>` });
     }
   }
-
   window.addEventListener('resize', () => { Plotly.Plots.resize('boxDiv'); Plotly.Plots.resize('lineDiv'); });
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', processAndPlot);
 });
 </script>
 </body>
