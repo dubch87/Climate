@@ -40,20 +40,12 @@
         width: 100%; padding: 8px 35px 8px 15px; border-radius: 20px; border: 1px solid var(--border); 
         background: var(--bg); color: var(--text); font-family: inherit; outline: none; font-size: 0.85rem; box-sizing: border-box;
     }
-    #clearSearch {
-        position: absolute; right: 10px; cursor: pointer; color: var(--sub-text); font-weight: 800;
-        display: none; user-select: none; font-size: 1.1rem; line-height: 1;
-    }
+    #clearSearch { position: absolute; right: 10px; cursor: pointer; color: var(--sub-text); font-weight: 800; display: none; user-select: none; font-size: 1.1rem; line-height: 1; }
     #clearSearch:hover { color: var(--max-color); }
 
-    #searchResults { 
-        position: absolute; top: 42px; left: 0; width: 320px; background: var(--card-bg); 
-        border: 1px solid var(--border); border-radius: 12px; max-height: 250px; overflow-y: auto; 
-        z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: none;
-    }
+    #searchResults { position: absolute; top: 42px; left: 0; width: 320px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; max-height: 250px; overflow-y: auto; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: none; }
     .search-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 0.8rem; text-align: left; }
     .search-item:hover { background: var(--ribbon-bg); color: var(--primary); }
-    .state-badge { float: right; background: var(--ribbon-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; color: var(--sub-text); }
 
     .dropdown-group { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
     select, #todayBtn { background: var(--bg); color: var(--text); padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; font-family: inherit; cursor: pointer; }
@@ -62,20 +54,25 @@
     .period-btn { padding: 8px 16px; border: none; background: transparent; border-radius: 25px; cursor: pointer; font-size: 0.75rem; font-weight: 600; color: var(--sub-text); font-family: inherit; }
     .period-btn.active { background: var(--primary); color: white; }
 
-    .stats-section { margin-bottom: 40px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .stats-section { margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .stats-row { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; width: 100%; }
-    .stat-card { background: var(--card-bg); padding: 20px; border-radius: 12px; text-align: center; width: 320px; border: 1px solid var(--border); }
+    .stat-card { background: var(--card-bg); padding: 20px; border-radius: 12px; text-align: center; width: 340px; border: 1px solid var(--border); position: relative; }
     .stat-card.daily { border: 2px solid var(--border); border-bottom-width: 5px; }
-    .stat-card.min { border-bottom-color: var(--min-color); }
-    .stat-card.max { border-bottom-color: var(--max-color); }
+    .stat-card.min { border-bottom: 3px solid var(--min-color); }
+    .stat-card.max { border-bottom: 3px solid var(--max-color); }
     .stat-value { font-size: 1.8rem; font-weight: 800; display: block; margin-top: 6px; }
-    .stat-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--sub-text); letter-spacing: 0.8px; line-height: 1.4; display: block; min-height: 2.8em; }
+    .stat-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--sub-text); letter-spacing: 0.8px; line-height: 1.4; display: block; min-height: 4.2em; }
+    
+    .departure-info { font-size: 0.75rem; font-weight: 700; margin-top: 8px; display: block; }
 
     .switch { position: relative; display: inline-block; width: 36px; height: 18px; margin: 0 6px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 34px; }
     .slider:before { position: absolute; content: ""; height: 12px; width: 12px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
     input:checked + .slider:before { transform: translateX(18px); }
+
+    .unit-label { transition: color 0.3s ease; }
+    .unit-active { color: var(--primary) !important; }
 
     #plots { display: flex; justify-content: center; padding: 0 4%; flex-wrap: wrap; gap: 20px; margin-bottom: 60px; }
     #boxDiv, #lineDiv { background: var(--card-bg); padding: 15px; border-radius: 20px; width: 46%; height: 400px; min-width: 380px; border: 1px solid var(--border); }
@@ -107,9 +104,9 @@
     </div>
 
     <div style="display:flex; align-items:center; border-left:1px solid var(--border); padding-left:15px; flex-shrink:0;">
-        <span style="font-size:0.7rem; font-weight:700">°C</span>
+        <span id="labelC" class="unit-label" style="font-size:0.7rem; font-weight:700">°C</span>
         <label class="switch"><input type="checkbox" id="unitToggle" checked><span class="slider"></span></label>
-        <span style="font-size:0.7rem; font-weight:700">°F</span>
+        <span id="labelF" class="unit-label" style="font-size:0.7rem; font-weight:700">°F</span>
     </div>
 </div>
 
@@ -121,6 +118,21 @@
   <button class="period-btn" data-start="0" data-end="9999">All History</button>
 </div>
 
+<div class="stats-section" id="liveRow" style="display:none; margin-bottom: 30px;">
+    <div class="stats-row">
+        <div class="stat-card" style="border-bottom: 4px solid var(--min-color);">
+            <span class="stat-label" id="liveMinLabel">Today's Observed Minimum Temperature</span>
+            <span class="stat-value" id="liveMin">--</span>
+            <span class="departure-info" id="liveMinDep"></span>
+        </div>
+        <div class="stat-card" style="border-bottom: 4px solid var(--max-color);">
+            <span class="stat-label" id="liveMaxLabel">Today's Observed Maximum Temperature</span>
+            <span class="stat-value" id="liveMax">--</span>
+            <span class="departure-info" id="liveMaxDep"></span>
+        </div>
+    </div>
+</div>
+
 <div class="stats-section">
   <div class="stats-row">
     <div class="stat-card min daily"><span class="stat-label" id="dayMinLabel">Average Minimum Temperature</span><span class="stat-value" id="avgMin">--</span></div>
@@ -130,9 +142,9 @@
     <div class="stat-card min"><span class="stat-label" id="monMinLabel">Average Minimum Temperature</span><span class="stat-value" id="monMin">--</span></div>
     <div class="stat-card max"><span class="stat-label" id="monMaxLabel">Average Maximum Temperature</span><span class="stat-value" id="monMax">--</span></div>
   </div>
-  <div class="stats-row" id="currentMonthRow" style="display:none;">
-    <div class="stat-card min"><span class="stat-label" id="curMinLabel">Current Month Average Min</span><span class="stat-value" id="curMin">--</span></div>
-    <div class="stat-card max"><span class="stat-label" id="curMaxLabel">Current Month Average Max</span><span class="stat-value" id="curMax">--</span></div>
+  <div class="stats-row">
+    <div class="stat-card min"><span class="stat-label" id="currMonthMinLabel">Average Minimum Temperature</span><span class="stat-value" id="currMonthMin">--</span></div>
+    <div class="stat-card max"><span class="stat-label" id="currMonthMaxLabel">Average Maximum Temperature</span><span class="stat-value" id="currMonthMax">--</span></div>
   </div>
 </div>
 
@@ -149,6 +161,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   let lastStation = null, fullDataset = null, allStations = [], currentRange = { start: 1991, end: 2020 };
+  let dailyReferenceValues = { tmin: [], tmax: [] }; 
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
   const map = L.map('map', { zoomSnap: 0.5 }).setView([35.5, -80], 7);
@@ -189,18 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
     clearBtn.style.display = val.length > 0 ? 'block' : 'none';
     searchResults.innerHTML = '';
     if (val.length < 2) { searchResults.style.display = 'none'; return; }
-    
-    // EXCLUDES state-only matching now to avoid 15-result clutter
-    const filtered = allStations.filter(s => 
-        s.name.toLowerCase().includes(val) || 
-        s.station.toLowerCase().includes(val)
-    ).slice(0, 15);
-
+    const filtered = allStations.filter(s => s.name.toLowerCase().includes(val) || s.station.toLowerCase().includes(val)).slice(0, 15);
     if (filtered.length > 0) {
         filtered.forEach(s => {
             const div = document.createElement('div');
             div.className = 'search-item';
-            div.innerHTML = `<span class="state-badge">${s.state || '--'}</span><strong>${s.name}</strong> <br><small style="color:var(--sub-text)">${s.station}</small>`;
+            div.innerHTML = `<strong>${s.name}</strong> <br><small style="color:var(--sub-text)">${s.station}</small>`;
             div.onclick = () => { selectStation(s); searchResults.style.display = 'none'; searchInput.value = ''; clearBtn.style.display = 'none'; };
             searchResults.appendChild(div);
         });
@@ -220,7 +227,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!lastStation) return;
     const statePath = (lastStation.state || 'UNK').toUpperCase();
     const filePath = `data/daily/${statePath}/${lastStation.station}.csv`;
-
     Papa.parse(filePath, {
       download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
       complete: function(results) {
@@ -231,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
         processAndPlot();
       },
       error: function() {
-        document.getElementById('stationHeader').innerHTML = `<span style="color:var(--max-color)">Error: Data not found in /${statePath}/${lastStation.station}.csv</span>`;
+        document.getElementById('stationHeader').innerHTML = `<span style="color:var(--max-color)">Error: Data not found.</span>`;
       }
     });
   }
@@ -250,14 +256,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  function updateToggleColors() {
+    const isF = document.getElementById('unitToggle').checked;
+    const labelC = document.getElementById('labelC');
+    const labelF = document.getElementById('labelF');
+    if (isF) { labelF.classList.add('unit-active'); labelC.classList.remove('unit-active'); }
+    else { labelC.classList.add('unit-active'); labelF.classList.remove('unit-active'); }
+  }
+
   const now = new Date();
   document.getElementById('month').value = now.getMonth() + 1;
   populateDays(now.getDate());
   document.getElementById('defaultPeriod').classList.add('active');
+  updateToggleColors();
 
   document.getElementById('month').addEventListener('change', () => { populateDays(); triggerDataFetch(); });
   document.getElementById('day').addEventListener('change', triggerDataFetch);
-  document.getElementById('unitToggle').addEventListener('change', processAndPlot);
+  document.getElementById('unitToggle').addEventListener('change', () => { updateToggleColors(); processAndPlot(); });
   document.getElementById('todayBtn').addEventListener('click', () => {
     const d = new Date();
     document.getElementById('month').value = d.getMonth() + 1;
@@ -275,6 +290,111 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+  async function fetchLiveComparison(lat, lon, normalHighVal, normalLowVal) {
+      const liveRow = document.getElementById('liveRow');
+      const isF = document.getElementById('unitToggle').checked;
+      const unit = isF ? "°F" : "°C";
+
+      try {
+          const pointRes = await fetch(`https://api.weather.gov/points/${lat},${lon}`);
+          const pointData = await pointRes.json();
+          const hourlyUrl = pointData.properties.forecastHourly;
+          
+          const stationListRes = await fetch(pointData.properties.observationStations);
+          const stationListData = await stationListRes.json();
+          const stationFeature = stationListData.features[0];
+          const stationId = stationFeature.properties.stationIdentifier;
+          const stationName = stationFeature.properties.name;
+
+          const [hourlyRes, obsRes] = await Promise.all([
+              fetch(hourlyUrl),
+              fetch(`https://api.weather.gov/stations/${stationId}/observations`)
+          ]);
+
+          const hourlyData = await hourlyRes.json();
+          const obsData = await obsRes.json();
+          const todayStr = new Date().toDateString();
+
+          const todayObsF = obsData.features
+              .filter(obs => new Date(obs.properties.timestamp).toDateString() === todayStr)
+              .map(obs => obs.properties.temperature.value)
+              .filter(v => v !== null)
+              .map(v => (v * 9/5 + 32));
+
+          const actualLowF = todayObsF.length ? Math.min(...todayObsF) : null;
+          const actualHighF = todayObsF.length ? Math.max(...todayObsF) : null;
+
+          const currentTime = new Date();
+          const forecastRemainingF = hourlyData.properties.periods
+              .filter(p => new Date(p.startTime).toDateString() === todayStr)
+              .filter(p => new Date(p.startTime) >= currentTime)
+              .map(p => p.temperature);
+
+          const forecastLowF = forecastRemainingF.length ? Math.min(...forecastRemainingF) : null;
+          const forecastHighF = forecastRemainingF.length ? Math.max(...forecastRemainingF) : null;
+
+          let finalLowF = actualLowF;
+          if (forecastLowF !== null) finalLowF = (finalLowF === null) ? forecastLowF : Math.min(finalLowF, forecastLowF);
+
+          let finalHighF = actualHighF;
+          if (forecastHighF !== null) finalHighF = (finalHighF === null) ? forecastHighF : Math.max(finalHighF, forecastHighF);
+
+          const dispHigh = isF ? finalHighF : (finalHighF - 32) * 5/9;
+          const dispLow = isF ? finalLowF : (finalLowF - 32) * 5/9;
+
+          liveRow.style.display = 'flex';
+          document.getElementById('liveMin').textContent = dispLow.toFixed(1) + unit;
+          document.getElementById('liveMax').textContent = dispHigh.toFixed(1) + unit;
+
+          const sourceTag = `<br><span style="font-size:0.6rem; color:var(--sub-text); font-weight:400; text-transform:none;">Source: ${stationName}</span>`;
+          
+          const isMinObserved = actualLowF !== null && (forecastLowF === null || actualLowF <= forecastLowF);
+          const isMaxObserved = actualHighF !== null && (forecastHighF === null || actualHighF >= forecastHighF);
+
+          document.getElementById('liveMinLabel').innerHTML = (isMinObserved ? "Observed Minimum Temperature" : "Projected Minimum Temperature") + sourceTag;
+          document.getElementById('liveMaxLabel').innerHTML = (isMaxObserved ? "Observed Maximum Temperature" : "Projected Maximum Temperature") + sourceTag;
+
+          updateDepartureBadge('liveMinDep', dispLow, normalLowVal, dailyReferenceValues.tmin);
+          updateDepartureBadge('liveMaxDep', dispHigh, normalHighVal, dailyReferenceValues.tmax);
+
+      } catch (e) {
+          console.error("Live fetch failed", e);
+          liveRow.style.display = 'none';
+      }
+  }
+
+  function updateDepartureBadge(id, current, normal, referenceValues) {
+      const el = document.getElementById(id);
+      if (normal === "--" || !referenceValues || referenceValues.length === 0) { el.textContent = ""; return; }
+      
+      const cleanNormal = parseFloat(normal.toString().replace(/[^\d.-]/g, ''));
+      const diffNum = parseFloat(current) - cleanNormal;
+      const diffStr = diffNum.toFixed(1);
+      
+      if (isNaN(diffNum)) { el.textContent = ""; return; }
+
+      const avg = referenceValues.reduce((a, b) => a + b, 0) / referenceValues.length;
+      const stdDev = Math.sqrt(referenceValues.reduce((s, v) => s + Math.pow(v - avg, 2), 0) / referenceValues.length);
+      const sigma = stdDev > 0 ? Math.abs(diffNum) / stdDev : 0;
+
+      let classification = "Normal";
+      if (sigma > 2) classification = (diffNum > 0 ? "Well Above" : "Well Below") + " Normal";
+      else if (sigma > 1) classification = (diffNum > 0 ? "Above" : "Below") + " Normal";
+
+      const fullText = `${diffNum > 0 ? '+' : ''}${diffStr}° from daily average (${classification})`;
+
+      if (diffNum > 0.05) {
+          el.style.color = "var(--max-color)";
+          el.textContent = fullText;
+      } else if (diffNum < -0.05) {
+          el.style.color = "var(--min-color)";
+          el.textContent = fullText;
+      } else {
+          el.style.color = "var(--sub-text)";
+          el.textContent = `Exactly at daily average (Normal)`;
+      }
+  }
+
   function processAndPlot() {
     if (!fullDataset) return;
     const mIdx = parseInt(document.getElementById('month').value);
@@ -283,9 +403,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const unit = isF ? "°F" : "°C";
     const convert = (v) => (v == null ? null : (isF ? (v * 9/5 + 32) : v));
     const monthName = monthNames[mIdx - 1];
-
-    // Get year range text for titles
-    const yearRangeText = currentRange.start === 0 ? "All History" : `${currentRange.start}-${currentRange.end}`;
     
     document.getElementById('dayMinLabel').textContent = `${monthName} ${dReq} Average Minimum Temperature`;
     document.getElementById('dayMaxLabel').textContent = `${monthName} ${dReq} Average Maximum Temperature`;
@@ -304,24 +421,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const dailyRows = periodData.filter(d => d.day === dReq);
     const getAvg = (arr) => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : "--";
     
-    document.getElementById('avgMax').textContent = getAvg(dailyRows.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
-    document.getElementById('avgMin').textContent = getAvg(dailyRows.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
+    dailyReferenceValues.tmin = dailyRows.map(r => convert(r.tmin)).filter(v => v !== null);
+    dailyReferenceValues.tmax = dailyRows.map(r => convert(r.tmax)).filter(v => v !== null);
+
+    const finalAvgMax = getAvg(dailyReferenceValues.tmax);
+    const finalAvgMin = getAvg(dailyReferenceValues.tmin);
+
+    document.getElementById('avgMax').textContent = finalAvgMax + unit;
+    document.getElementById('avgMin').textContent = finalAvgMin + unit;
     document.getElementById('monMax').textContent = getAvg(periodData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
     document.getElementById('monMin').textContent = getAvg(periodData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
 
-    const today = new Date();
-    const realM = today.getMonth() + 1;
-    const curRow = document.getElementById('currentMonthRow');
-    if (mIdx === realM) {
-        const curMatch = fullDataset.filter(d => d.DATE.startsWith(`${today.getFullYear()}-${String(realM).padStart(2,'0')}`));
-        if (curMatch.length > 0) {
-            curRow.style.display = 'flex';
-            document.getElementById('curMinLabel').textContent = `${monthNames[realM-1]} ${today.getFullYear()} Average Min`;
-            document.getElementById('curMaxLabel').textContent = `${monthNames[realM-1]} ${today.getFullYear()} Average Max`;
-            document.getElementById('curMax').textContent = getAvg(curMatch.map(r => convert(r.TMAX/10)).filter(v => !isNaN(v))) + unit;
-            document.getElementById('curMin').textContent = getAvg(curMatch.map(r => convert(r.TMIN/10)).filter(v => !isNaN(v))) + unit;
-        } else { curRow.style.display = 'none'; }
-    } else { curRow.style.display = 'none'; }
+    const currYear = 2026;
+    document.getElementById('currMonthMinLabel').textContent = `${monthName} ${currYear} Average Minimum Temperature`;
+    document.getElementById('currMonthMaxLabel').textContent = `${monthName} ${currYear} Average Maximum Temperature`;
+
+    const currYearData = rawMonthData.filter(d => d.year === currYear);
+    document.getElementById('currMonthMin').textContent = getAvg(currYearData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
+    document.getElementById('currMonthMax').textContent = getAvg(currYearData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
+
+    const todayDate = new Date();
+    if (mIdx === (todayDate.getMonth() + 1) && dReq === todayDate.getDate()) {
+        fetchLiveComparison(lastStation.lat, lastStation.lon, finalAvgMax, finalAvgMin);
+    } else {
+        document.getElementById('liveRow').style.display = 'none';
+    }
 
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const baseLayout = { 
@@ -333,14 +457,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if(dailyRows.length > 0) {
       Plotly.newPlot('boxDiv', [
-        { y: dailyRows.map(r => convert(r.tmin)).filter(v => v !== null), type:'box', name:'Min', marker: {color: '#74b9ff'}, boxpoints:'all', jitter:0.3 },
-        { y: dailyRows.map(r => convert(r.tmax)).filter(v => v !== null), type:'box', name:'Max', marker: {color: '#ff7675'}, boxpoints:'all', jitter:0.3 }
-      ], { ...baseLayout, title: `<b>${monthName} ${dReq} Distribution</b><br><span style="font-size:0.75rem">(${yearRangeText})</span>` });
+        { 
+          y: dailyReferenceValues.tmin, 
+          text: dailyRows.filter(r => r.tmin !== null).map(r => r.year),
+          type:'box', name:'Min', boxpoints: 'all', jitter: 0.5, pointpos: -1.8,
+          marker: {color: '#74b9ff'}, hovertemplate: 'Year: %{text}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
+        },
+        { 
+          y: dailyReferenceValues.tmax, 
+          text: dailyRows.filter(r => r.tmax !== null).map(r => r.year),
+          type:'box', name:'Max', boxpoints: 'all', jitter: 0.5, pointpos: 1.8,
+          marker: {color: '#ff7675'}, hovertemplate: 'Year: %{text}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
+        }
+      ], { ...baseLayout, title: `<b>${monthName} ${dReq} Temperature Distribution</b>` });
 
       Plotly.newPlot('lineDiv', [
-        { x: dailyRows.map(r => r.year), y: dailyRows.map(r => convert(r.tmin)).filter(v => v !== null), type:'scatter', mode:'lines+markers', name:'Min', line: {color: '#74b9ff', width: 2} },
-        { x: dailyRows.map(r => r.year), y: dailyRows.map(r => convert(r.tmax)).filter(v => v !== null), type:'scatter', mode:'lines+markers', name:'Max', line: {color: '#ff7675', width: 2} }
-      ], { ...baseLayout, title: `<b>Historical ${monthName} ${dReq} Trend</b><br><span style="font-size:0.75rem">(${yearRangeText})</span>` });
+        { 
+          x: dailyRows.map(r => r.year), y: dailyReferenceValues.tmax, 
+          text: dailyRows.map(r => r.year), type:'scatter', name:'Max', line: {color: '#ff7675'},
+          hovertemplate: 'Year: %{text}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
+        },
+        { 
+          x: dailyRows.map(r => r.year), y: dailyReferenceValues.tmin, 
+          text: dailyRows.map(r => r.year), type:'scatter', name:'Min', line: {color: '#74b9ff'},
+          hovertemplate: 'Year: %{text}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
+        }
+      ], { ...baseLayout, title: `<b>${monthName} ${dReq} Historical Trend</b>` });
     }
   }
   window.addEventListener('resize', () => { Plotly.Plots.resize('boxDiv'); Plotly.Plots.resize('lineDiv'); });
