@@ -20,34 +20,52 @@
 
     body { margin:0; padding:0; font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); overflow-x: hidden; }
     .top-header { text-align: center; margin: 30px 0 5px 0; font-weight: 300; font-size: 1.8rem; letter-spacing: -0.5px; }
-    /* This ensures the container itself aligns items centrally */
     #stationHeader {
         display: flex;
-        align-items: center; /* This is the magic for vertical centering */
+        align-items: center;
         justify-content: center;
-        gap: 8px; /* Consistent spacing between all elements */
+        gap: 8px;
         margin-bottom: 20px;
         color: var(--primary);
         font-weight: 600;
         font-size: 1.1rem;
         min-height: 1.6em;
-        flex-wrap: wrap; /* Allows wrapping on small screens */
+        flex-wrap: wrap;
     }
     
-    /* Updated Badge Styling */
     .station-id-badge {
         display: inline-flex;
         align-items: center;
         background: var(--ribbon-bg);
         color: var(--sub-text);
-        font-size: 0.7rem; /* Slightly smaller for better proportion */
+        font-size: 0.7rem;
         padding: 0 8px;
-        height: 20px; /* Fixed height helps with centering */
+        height: 20px;
         border-radius: 4px;
         font-weight: 500;
         border: 1px solid var(--border);
         letter-spacing: 0.5px;
         line-height: 1;
+    }
+
+    .state-badge {
+        background: var(--card-bg);
+        color: var(--sub-text);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        border: 1px solid var(--border);
+        text-transform: uppercase;
+        flex-shrink: 0;
+    }
+
+    .station-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        cursor: pointer;
     }
 
     #map { 
@@ -57,13 +75,82 @@
       filter: invert(var(--map-invert)) hue-rotate(180deg) brightness(0.9);
     }
 
-    #controls { 
-      margin: 0 auto 25px auto; padding: 10px 20px; background: var(--card-bg); border-radius: 50px; 
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; gap: 20px; align-items: center; justify-content: center; 
-      width: fit-content; border: 1px solid var(--border); flex-wrap: nowrap;
+    /* Container for the control */
+    .leaflet-control-locate {
+        background: var(--card-bg); /* Use your theme variable */
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s;
     }
 
-    .search-container { position: relative; width: 240px; flex-shrink: 0; display: flex; align-items: center; }
+    /* Match the exact Leaflet button style */
+    /* Target the 'a' tag specifically to override Leaflet's default white background */
+    .leaflet-control-locate a {
+        background-color: var(--card-bg) !important;
+        color: var(--text) !important;
+        border-bottom: none; /* Removes the thin line often seen in leaflet-bar */
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 30px !important;
+        height: 30px !important;
+    }
+    
+    /* Ensure the hover state matches your theme */
+    .leaflet-control-locate a:hover {
+        background-color: var(--ribbon-bg) !important;
+        color: var(--primary) !important;
+    }
+    
+    /* Adjust the SVG to sit centered */
+    .leaflet-control-locate svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+    }
+    
+    /* This matches the border color to your theme variables */
+    .leaflet-bar {
+        border: 1px solid var(--border) !important;
+    }
+
+    #controls { 
+      margin: 0 auto 25px auto; 
+      padding: 15px 20px; 
+      background: var(--card-bg); 
+      border-radius: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+      display: flex; 
+      gap: 20px; 
+      align-items: center; 
+      justify-content: center; 
+      width: fit-content; 
+      max-width: 92%;
+      border: 1px solid var(--border); 
+      flex-wrap: wrap;
+    }
+
+    .search-container { 
+      position: relative; 
+      width: 240px; 
+      flex-shrink: 0; 
+      display: flex; 
+      align-items: center; 
+    }
+
+    @media (max-width: 600px) {
+      .search-container {
+        width: 100%;
+        justify-content: center;
+      }
+      #controls {
+        border-radius: 20px;
+        gap: 15px;
+      }
+    }
     #stationSearch { 
         width: 100%; padding: 8px 35px 8px 15px; border-radius: 20px; border: 1px solid var(--border); 
         background: var(--bg); color: var(--text); font-family: inherit; outline: none; font-size: 0.85rem; box-sizing: border-box;
@@ -84,12 +171,12 @@
 
     .stats-section { margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .stats-row { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; width: 100%; }
-    .stat-card { background: var(--card-bg); padding: 20px; border-radius: 12px; text-align: center; width: 340px; border: 1px solid var(--border); position: relative; }
+    .stat-card { background: var(--card-bg); padding: 20px; border-radius: 12px; text-align: center; width: 300px; border: 1px solid var(--border); position: relative; }
     .stat-card.daily { border: 2px solid var(--border); border-bottom-width: 5px; }
     .stat-card.min { border-bottom: 3px solid var(--min-color); }
     .stat-card.max { border-bottom: 3px solid var(--max-color); }
     .stat-value { font-size: 1.8rem; font-weight: 800; display: block; margin-top: 6px; }
-    .stat-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--sub-text); letter-spacing: 0.8px; line-height: 1.4; display: block; min-height: 4.2em; }
+    .stat-label { font-size: 0.75rem; font-weight: 800; color: var(--sub-text); letter-spacing: 0.8px; line-height: 1.4; display: block; min-height: 4.2em; }
     
     .departure-info { font-size: 0.75rem; font-weight: 700; margin-top: 8px; display: block; }
 
@@ -196,6 +283,63 @@ document.addEventListener('DOMContentLoaded', function() {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
   const markers = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40 });
 
+  // Define a custom Leaflet Control
+  const LocateControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function(map) {
+          // Create the main container with Leaflet's 'leaflet-bar' class
+          const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-locate');
+
+          // Create a link element to match the structure of Zoom buttons
+          const link = L.DomUtil.create('a', '', container);
+          link.href = '#';
+          link.title = "Find nearest station";
+          link.role = "button";
+          link.ariaLabel = "Find nearest station";
+
+          link.innerHTML = `
+              <svg viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+              </svg>`;
+
+          // Move the click event to the link
+          link.onclick = function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+
+              if (!navigator.geolocation) {
+                  alert("Geolocation is not supported");
+                  return;
+              }
+
+              // Your existing geolocation logic here...
+              navigator.geolocation.getCurrentPosition((position) => {
+                  const userLat = position.coords.latitude;
+                  const userLon = position.coords.longitude;
+                  if (allStations.length === 0) return;
+                  let closest = null;
+                  let minDist = Infinity;
+                  allStations.forEach(st => {
+                      if (!st.lat || !st.lon) return;
+                      const d = Math.sqrt(Math.pow(userLat - st.lat, 2) + Math.pow(userLon - st.lon, 2));
+                      if (d < minDist) {
+                          minDist = d;
+                          closest = st;
+                      }
+                  });
+                  if (closest) {
+                      map.flyTo([userLat, userLon], 10);
+                      setTimeout(() => selectStation(closest), 1000);
+                  }
+              }, () => alert("Location access denied"));
+          };
+
+          return container;
+      }
+  });
+
+  map.addControl(new LocateControl());
+
   function getStationStyles(id) {
     if (id.startsWith('USC')) return { fill: 'rgba(16, 172, 132, 0.3)', stroke: '#10ac84' };
     if (id.startsWith('USR')) return { fill: 'rgba(243, 156, 18, 0.3)', stroke: '#f39c12' };
@@ -233,12 +377,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const filtered = allStations.filter(s => s.name.toLowerCase().includes(val) || s.station.toLowerCase().includes(val)).slice(0, 15);
     if (filtered.length > 0) {
         filtered.forEach(s => {
-            const div = document.createElement('div');
-            div.className = 'search-item';
-            div.innerHTML = `<strong>${s.name}</strong> <br><small style="color:var(--sub-text)">${s.station}</small>`;
-            div.onclick = () => { selectStation(s); searchResults.style.display = 'none'; searchInput.value = ''; clearBtn.style.display = 'none'; };
-            searchResults.appendChild(div);
-        });
+                const div = document.createElement('div');
+                div.className = 'search-item';
+
+                // This line adds the name, the ID below it, and the State Badge on the right
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div>
+                            <strong>${s.name}</strong><br>
+                            <small style="color:var(--sub-text)">${s.station}</small>
+                        </div>
+                        <span class="state-badge">${s.state || ''}</span>
+                    </div>
+                `;
+                  
+                div.onclick = () => { 
+                    selectStation(s); 
+                    searchResults.style.display = 'none'; 
+                    searchInput.value = ''; 
+                    clearBtn.style.display = 'none'; 
+                };
+                searchResults.appendChild(div);
+            });
         searchResults.style.display = 'block';
     } else { searchResults.style.display = 'none'; }
   });
@@ -452,11 +612,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const convert = (v) => (v == null ? null : (isF ? (v * 9/5 + 32) : v));
     const monthName = monthNames[mIdx - 1];
     
-    // Update labels for the Daily and Historical Monthly Average cards
-    document.getElementById('dayMinLabel').textContent = `${monthName} ${dReq} Average Minimum Temperature`;
-    document.getElementById('dayMaxLabel').textContent = `${monthName} ${dReq} Average Maximum Temperature`;
-    document.getElementById('monMinLabel').textContent = `${monthName} Average Minimum Temperature`;
-    document.getElementById('monMaxLabel').textContent = `${monthName} Average Maximum Temperature`;
+    // Formatting the year range string based on selection
+    const rangeText = currentRange.start === 0 ? "All Available Data" : `${currentRange.start}–${currentRange.end}`;
+    const rangeHtml = `<br><span style="font-size:0.65rem; color:var(--sub-text); font-weight:400; text-transform:none;">${rangeText}</span>`;
+
+    // Update labels for the Daily and Historical Monthly Average cards with the date range
+    document.getElementById('dayMinLabel').innerHTML = `${monthName} ${dReq} Average Minimum Temperature ${rangeHtml}`;
+    document.getElementById('dayMaxLabel').innerHTML = `${monthName} ${dReq} Average Maximum Temperature ${rangeHtml}`;
+    document.getElementById('monMinLabel').innerHTML = `${monthName} Average Minimum Temperature ${rangeHtml}`;
+    document.getElementById('monMaxLabel').innerHTML = `${monthName} Average Maximum Temperature ${rangeHtml}`;
 
     const rawMonthData = fullDataset.filter(d => d.DATE && parseInt(d.DATE.split('-')[1]) === mIdx)
       .map(r => ({
@@ -487,38 +651,35 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- 2026 CURRENT MONTH CARDS UPDATES ---
     const currYear = 2026;
     const todayDate = new Date();
-    const currentSystemMonth = todayDate.getMonth() + 1; // 1-based Month
+    const currentSystemMonth = todayDate.getMonth() + 1; 
     
-    // Target only the specific row for the Current Month/Year cards
-    const currYearRow = document.getElementById('currMonthMin').closest('.stats-row');
+    const minCard2026 = document.getElementById('currMonthMin').parentElement;
+    const maxCard2026 = document.getElementById('currMonthMax').parentElement;
 
-    // Requirement 2: Hide 2026 cards if a future month is selected
     if (mIdx > currentSystemMonth) {
-        currYearRow.style.display = 'none';
+        minCard2026.style.display = 'none';
+        maxCard2026.style.display = 'none';
     } else {
-        currYearRow.style.display = 'flex';
+        minCard2026.style.display = 'block';
+        maxCard2026.style.display = 'block';
         
         const currYearData = rawMonthData.filter(d => d.year === currYear);
-        
-        // Requirement 1: Calculate latest available date in data for this station
         const validDays = currYearData.filter(d => d.tmin !== null || d.tmax !== null).map(d => d.day);
+        
         let latestDateLabel = "";
         if (validDays.length > 0) {
             const latestDay = Math.max(...validDays);
-            latestDateLabel = `<br><span style="font-size:0.65rem; color:var(--primary); font-weight:400; text-transform:none;">Latest Data: ${monthName} ${latestDay}, ${currYear}</span>`;
+            // Updated color here to var(--sub-text)
+            latestDateLabel = `<br><span style="font-size:0.65rem; color:var(--sub-text); font-weight:400; text-transform:none;">Latest Data: ${monthName} ${latestDay}, ${currYear}</span>`;
         }
 
-        // Set the Labels with the dynamic latest date
         document.getElementById('currMonthMinLabel').innerHTML = `${monthName} ${currYear} Average Minimum Temperature ${latestDateLabel}`;
         document.getElementById('currMonthMaxLabel').innerHTML = `${monthName} ${currYear} Average Maximum Temperature ${latestDateLabel}`;
 
-        // Set the Values
         document.getElementById('currMonthMin').textContent = getAvg(currYearData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
         document.getElementById('currMonthMax').textContent = getAvg(currYearData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
     }
-    // --- END 2026 UPDATES ---
 
-    // Handle Live Comparison Visibility
     if (mIdx === (todayDate.getMonth() + 1) && dReq === todayDate.getDate()) {
         fetchLiveComparison(lastStation.lat, lastStation.lon, finalAvgMax, finalAvgMin);
     } else {
