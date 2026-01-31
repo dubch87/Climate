@@ -20,8 +20,36 @@
 
     body { margin:0; padding:0; font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); overflow-x: hidden; }
     .top-header { text-align: center; margin: 30px 0 5px 0; font-weight: 300; font-size: 1.8rem; letter-spacing: -0.5px; }
-    #stationHeader { text-align: center; margin-bottom: 20px; color: var(--primary); font-weight: 600; font-size: 1.1rem; min-height: 1.6em; }
+    /* This ensures the container itself aligns items centrally */
+    #stationHeader {
+        display: flex;
+        align-items: center; /* This is the magic for vertical centering */
+        justify-content: center;
+        gap: 8px; /* Consistent spacing between all elements */
+        margin-bottom: 20px;
+        color: var(--primary);
+        font-weight: 600;
+        font-size: 1.1rem;
+        min-height: 1.6em;
+        flex-wrap: wrap; /* Allows wrapping on small screens */
+    }
     
+    /* Updated Badge Styling */
+    .station-id-badge {
+        display: inline-flex;
+        align-items: center;
+        background: var(--ribbon-bg);
+        color: var(--sub-text);
+        font-size: 0.7rem; /* Slightly smaller for better proportion */
+        padding: 0 8px;
+        height: 20px; /* Fixed height helps with centering */
+        border-radius: 4px;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        letter-spacing: 0.5px;
+        line-height: 1;
+    }
+
     #map { 
       height: 400px; width: 92%; max-width: 1200px; margin: 0 auto 25px auto; 
       border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
@@ -115,7 +143,7 @@
   <button class="period-btn" data-start="1971" data-end="2000">1971-2000</button>
   <button class="period-btn" data-start="1981" data-end="2010">1981-2010</button>
   <button class="period-btn" data-start="1991" data-end="2020" id="defaultPeriod">1991-2020</button>
-  <button class="period-btn" data-start="0" data-end="9999">All History</button>
+  <button class="period-btn" data-start="0" data-end="9999">All Data</button>
 </div>
 
 <div class="stats-section" id="liveRow" style="display:none; margin-bottom: 30px;">
@@ -224,23 +252,43 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function triggerDataFetch() {
-    if (!lastStation) return;
-    const statePath = (lastStation.state || 'UNK').toUpperCase();
-    const filePath = `data/daily/${statePath}/${lastStation.station}.csv`;
-    Papa.parse(filePath, {
-      download: true, header: true, dynamicTyping: true, skipEmptyLines: true,
-      complete: function(results) {
-        fullDataset = results.data;
-        const years = fullDataset.filter(d => d.DATE).map(d => parseInt(d.DATE.split('-')[0]));
-        document.getElementById('stationHeader').innerHTML = 
-          `Station: <span style="color:var(--text)">${lastStation.name}, ${lastStation.state}</span> <span style="font-size:0.85rem; color:var(--sub-text); font-weight:400">(${Math.min(...years)}-${Math.max(...years)})</span>`;
-        processAndPlot();
-      },
-      error: function() {
-        document.getElementById('stationHeader').innerHTML = `<span style="color:var(--max-color)">Error: Data not found.</span>`;
-      }
-    });
-  }
+      if (!lastStation) return;
+      const statePath = (lastStation.state || 'UNK').toUpperCase();
+      const filePath = `data/daily/${statePath}/${lastStation.station}.csv`;
+
+      Papa.parse(filePath, {
+        download: true, 
+        header: true, 
+        dynamicTyping: true, 
+        skipEmptyLines: true,
+        complete: function(results) {
+          fullDataset = results.data;
+
+          // Filter out any rows without a valid date to calculate year range
+          const validRows = fullDataset.filter(d => d.DATE);
+          const years = validRows.map(d => parseInt(d.DATE.split('-')[0]));
+
+          const minYear = Math.min(...years);
+          const maxYear = Math.max(...years);
+
+          // Update the header with the Name, Station ID Badge, and Date Range
+          document.getElementById('stationHeader').innerHTML = `
+              <span>Station:</span>
+              <span style="color:var(--text)">${lastStation.name}, ${lastStation.state}</span>
+              <span class="station-id-badge">${lastStation.station}</span>
+              <span style="font-size:0.85rem; color:var(--sub-text); font-weight:400;">
+                  (${minYear}–${maxYear})
+              </span>
+          `;
+            
+          processAndPlot();
+        },
+        error: function() {
+          document.getElementById('stationHeader').innerHTML = 
+              `<span style="color:var(--max-color)">Error: Data not found for station ${lastStation.station}.</span>`;
+        }
+      });
+    }
 
   function populateDays(selectedDay = null) {
     const month = parseInt(document.getElementById('month').value);
@@ -404,6 +452,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const convert = (v) => (v == null ? null : (isF ? (v * 9/5 + 32) : v));
     const monthName = monthNames[mIdx - 1];
     
+    // Update labels for the Daily and Historical Monthly Average cards
     document.getElementById('dayMinLabel').textContent = `${monthName} ${dReq} Average Minimum Temperature`;
     document.getElementById('dayMaxLabel').textContent = `${monthName} ${dReq} Average Maximum Temperature`;
     document.getElementById('monMinLabel').textContent = `${monthName} Average Minimum Temperature`;
@@ -427,20 +476,49 @@ document.addEventListener('DOMContentLoaded', function() {
     const finalAvgMax = getAvg(dailyReferenceValues.tmax);
     const finalAvgMin = getAvg(dailyReferenceValues.tmin);
 
+    // Update Daily Averages
     document.getElementById('avgMax').textContent = finalAvgMax + unit;
     document.getElementById('avgMin').textContent = finalAvgMin + unit;
+
+    // Update Historical Monthly Averages
     document.getElementById('monMax').textContent = getAvg(periodData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
     document.getElementById('monMin').textContent = getAvg(periodData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
 
+    // --- 2026 CURRENT MONTH CARDS UPDATES ---
     const currYear = 2026;
-    document.getElementById('currMonthMinLabel').textContent = `${monthName} ${currYear} Average Minimum Temperature`;
-    document.getElementById('currMonthMaxLabel').textContent = `${monthName} ${currYear} Average Maximum Temperature`;
-
-    const currYearData = rawMonthData.filter(d => d.year === currYear);
-    document.getElementById('currMonthMin').textContent = getAvg(currYearData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
-    document.getElementById('currMonthMax').textContent = getAvg(currYearData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
-
     const todayDate = new Date();
+    const currentSystemMonth = todayDate.getMonth() + 1; // 1-based Month
+    
+    // Target only the specific row for the Current Month/Year cards
+    const currYearRow = document.getElementById('currMonthMin').closest('.stats-row');
+
+    // Requirement 2: Hide 2026 cards if a future month is selected
+    if (mIdx > currentSystemMonth) {
+        currYearRow.style.display = 'none';
+    } else {
+        currYearRow.style.display = 'flex';
+        
+        const currYearData = rawMonthData.filter(d => d.year === currYear);
+        
+        // Requirement 1: Calculate latest available date in data for this station
+        const validDays = currYearData.filter(d => d.tmin !== null || d.tmax !== null).map(d => d.day);
+        let latestDateLabel = "";
+        if (validDays.length > 0) {
+            const latestDay = Math.max(...validDays);
+            latestDateLabel = `<br><span style="font-size:0.65rem; color:var(--primary); font-weight:400; text-transform:none;">Latest Data: ${monthName} ${latestDay}, ${currYear}</span>`;
+        }
+
+        // Set the Labels with the dynamic latest date
+        document.getElementById('currMonthMinLabel').innerHTML = `${monthName} ${currYear} Average Minimum Temperature ${latestDateLabel}`;
+        document.getElementById('currMonthMaxLabel').innerHTML = `${monthName} ${currYear} Average Maximum Temperature ${latestDateLabel}`;
+
+        // Set the Values
+        document.getElementById('currMonthMin').textContent = getAvg(currYearData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
+        document.getElementById('currMonthMax').textContent = getAvg(currYearData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
+    }
+    // --- END 2026 UPDATES ---
+
+    // Handle Live Comparison Visibility
     if (mIdx === (todayDate.getMonth() + 1) && dReq === todayDate.getDate()) {
         fetchLiveComparison(lastStation.lat, lastStation.lon, finalAvgMax, finalAvgMin);
     } else {
