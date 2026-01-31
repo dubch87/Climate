@@ -366,6 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   const searchInput = document.getElementById('stationSearch');
+  searchInput.value = '';
   const searchResults = document.getElementById('searchResults');
   const clearBtn = document.getElementById('clearSearch');
 
@@ -404,6 +405,15 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   clearBtn.onclick = () => { searchInput.value = ''; clearBtn.style.display = 'none'; searchResults.style.display = 'none'; searchInput.focus(); };
+
+  document.addEventListener('click', (e) => {
+    // We check if the click was anywhere OTHER than the input or the results box
+    const isClickInsideSearch = searchInput.contains(e.target) || searchResults.contains(e.target);
+
+    if (!isClickInsideSearch) {
+        searchResults.style.display = 'none';
+    }
+  });
 
   function selectStation(st) {
     lastStation = st;
