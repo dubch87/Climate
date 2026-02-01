@@ -765,17 +765,16 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
     document.getElementById('monMax').textContent = getAvg(periodData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
     document.getElementById('monMin').textContent = getAvg(periodData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
 
-    // 4. CURRENT 2026 MONTH CARDS
+// 4. CURRENT 2026 MONTH CARDS (Only show if 2026 is selected)
     const currentSystemMonth = todayDate.getMonth() + 1; 
     const minCard2026 = document.getElementById('currMonthMin').parentElement;
     const maxCard2026 = document.getElementById('currMonthMax').parentElement;
 
-    if (mIdx > currentSystemMonth) {
-        minCard2026.style.display = 'none';
-        maxCard2026.style.display = 'none';
-    } else {
+    // First check: Is the user actually looking at the current year (2026)?
+    if (sYear === systemYear && mIdx <= currentSystemMonth) {
         minCard2026.style.display = 'block';
         maxCard2026.style.display = 'block';
+        
         const currYearData = rawMonthData.filter(d => d.year === systemYear);
         const validDays = currYearData.filter(d => d.tmin !== null || d.tmax !== null).map(d => d.day);
         let latestDateLabel = validDays.length > 0 ? `<br><span style="font-size:0.65rem; color:var(--sub-text); font-weight:400;">Latest Data: ${monthName} ${Math.max(...validDays)}, ${systemYear}</span>` : "";
@@ -784,6 +783,10 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
         document.getElementById('currMonthMaxLabel').innerHTML = `${monthName} ${systemYear} Average Maximum Temperature ${latestDateLabel}`;
         document.getElementById('currMonthMin').textContent = getAvg(currYearData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
         document.getElementById('currMonthMax').textContent = getAvg(currYearData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
+    } else {
+        // Hide them if we are looking at the past or the future
+        minCard2026.style.display = 'none';
+        maxCard2026.style.display = 'none';
     }
 
     // 5. BOX & LINE TREND PLOTS
@@ -888,10 +891,10 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
     }
 
     // 8. RENDER THE ±15 DAY CHARTS
-    renderWindowCharts(yearSlice, historicalAverages, sYear, windowLabels);
+    renderWindowCharts(yearSlice, historicalAverages, sYear, windowLabels, rangeText);
   }
 
-  function renderWindowCharts(yearSlice, histAverages, sYear, labels) {
+  function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText) {
       const isF = document.getElementById('unitToggle').checked;
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -917,27 +920,27 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
               text: yearSlice.map((d, i) => getSigmaClassification(convertTemp(d.TMAX/10), histAverages[i].avgMax, dailyReferenceValues.tmax)),
               name: `${sYear} Maximum Temperature`, mode: 'lines+markers', 
               line: {color: '#ff7675', width: 3}, marker: {size: 6},
-              hovertemplate: 'Year: ' + sYear + '<br>Temp: %{y:.1f}' + tempUnit + '<br><b>%{text}</b><extra></extra>'
+              // Changed to show Date: MM/DD/YYYY
+              hovertemplate: 'Date: %{x}/' + sYear + '<br>Temp: %{y:.1f}' + tempUnit + '<br><b>%{text}</b><extra></extra>'
           },
           { 
               x: labels, y: yearSlice.map(d => convertTemp(d.TMIN/10)), 
               text: yearSlice.map((d, i) => getSigmaClassification(convertTemp(d.TMIN/10), histAverages[i].avgMin, dailyReferenceValues.tmin)),
               name: `${sYear} Minimum Temperature`, mode: 'lines+markers', 
               line: {color: '#74b9ff', width: 3}, marker: {size: 6},
-              hovertemplate: 'Year: ' + sYear + '<br>Temp: %{y:.1f}' + tempUnit + '<br><b>%{text}</b><extra></extra>'
+              hovertemplate: 'Date: %{x}/' + sYear + '<br>Temp: %{y:.1f}' + tempUnit + '<br><b>%{text}</b><extra></extra>'
           },
-          // Normals don't need the status line
           { 
               x: labels, y: histAverages.map(h => h.avgMax), 
               name: `Normal Maximum Temperature`, mode: 'lines', 
               line: {color: '#ff7675', dash: 'dot', width: 1.5},
-              hovertemplate: 'Normal Maximum Temperature<br>Temp: %{y:.1f}' + tempUnit + '<extra></extra>'
+              hovertemplate: 'Normal Maximum Temperature<br>Date: %{x}<br>Temp: %{y:.1f}' + tempUnit + '<extra></extra>'
           },
           { 
               x: labels, y: histAverages.map(h => h.avgMin), 
               name: `Normal Minimum Temperature`, mode: 'lines', 
               line: {color: '#74b9ff', dash: 'dot', width: 1.5},
-              hovertemplate: 'Normal Minimum Temperature<br>Temp: %{y:.1f}' + tempUnit + '<extra></extra>'
+              hovertemplate: 'Normal Minimum Temperature<br>Date: %{x}<br>Temp: %{y:.1f}' + tempUnit + '<extra></extra>'
           }
       ];
 
@@ -963,7 +966,7 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
       // Render Temperature Chart
       Plotly.react('windowTempDiv', tempTraces, { 
           ...baseLayout, 
-          title: `<b>${sYear} Temperature vs ${currentRange.start}-${currentRange.end} Normals</b>`,
+          title: `<b>${sYear} Temperature vs ${rangeText} Normals</b>`,
           yaxis: { 
               title: tempUnit, 
               gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' 
