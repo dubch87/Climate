@@ -215,6 +215,7 @@
             <option value="10">October</option><option value="11">November</option><option value="12">December</option>
         </select>
         <select id="day"></select>
+        <select id="yearSelect"></select>
         <button id="todayBtn">Today</button>
     </div>
 
@@ -266,6 +267,8 @@
 <div id="plots">
   <div id="boxDiv"></div>
   <div id="lineDiv"></div>
+  <div id="windowTempDiv" style="background: var(--card-bg); padding: 15px; border-radius: 20px; width: 46%; height: 400px; min-width: 380px; border: 1px solid var(--border);"></div>
+  <div id="windowPrecipDiv" style="background: var(--card-bg); padding: 15px; border-radius: 20px; width: 46%; height: 400px; min-width: 380px; border: 1px solid var(--border);"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -474,6 +477,66 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+// --- INITIALIZE YEAR DROPDOWN ---
+const yearSelect = document.getElementById('yearSelect');
+const currYear = 2026; 
+
+for (let y = currYear; y >= 1850; y--) {
+    let opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === currYear) opt.selected = true;
+    yearSelect.appendChild(opt);
+}
+
+let isSyncing = false;
+
+function syncPeriodToYear(year) {
+    let start, end;
+
+    // 1. Handle the outliers first
+    if (year < 1961) {
+        start = 0; end = 9999; // All Data
+    } 
+    else if (year > 2020) {
+        start = 1991; end = 2020; // Default to most recent normal
+    }
+    // 2. Handle overlaps by prioritizing the most "current" bracket for that year
+    else if (year >= 1991) {
+        start = 1991; end = 2020;
+    } else if (year >= 1981) {
+        start = 1981; end = 2010;
+    } else if (year >= 1971) {
+        start = 1971; end = 2000;
+    } else if (year >= 1961) {
+        start = 1961; end = 1990;
+    }
+
+    // Now find the button and click it
+    const buttons = document.querySelectorAll('.period-btn');
+    buttons.forEach(btn => {
+        if (parseInt(btn.dataset.start) === start && parseInt(btn.dataset.end) === end) {
+            // Check if it's already active to prevent "click loops"
+            if (!btn.classList.contains('active')) {
+                btn.click();
+            }
+        }
+    });
+}
+
+document.getElementById('yearSelect').addEventListener('change', (e) => {
+    if (isSyncing) return;
+    isSyncing = true;
+    
+    const selectedYear = parseInt(e.target.value);
+    syncPeriodToYear(selectedYear);
+    
+    // ADD THIS LINE:
+    processAndPlot(); 
+    
+    isSyncing = false;
+});
+
   function updateToggleColors() {
     const isF = document.getElementById('unitToggle').checked;
     const labelC = document.getElementById('labelC');
@@ -488,14 +551,30 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('defaultPeriod').classList.add('active');
   updateToggleColors();
 
-  document.getElementById('month').addEventListener('change', () => { populateDays(); triggerDataFetch(); });
-  document.getElementById('day').addEventListener('change', triggerDataFetch);
-  document.getElementById('unitToggle').addEventListener('change', () => { updateToggleColors(); processAndPlot(); });
+  // Change triggerDataFetch to processAndPlot so we use the data already in memory
+  document.getElementById('month').addEventListener('change', () => { 
+      populateDays(); 
+      processAndPlot(); 
+  });
+
+  document.getElementById('day').addEventListener('change', processAndPlot);
+
+  document.getElementById('unitToggle').addEventListener('change', () => { 
+      updateToggleColors(); 
+      processAndPlot(); 
+  });
+
   document.getElementById('todayBtn').addEventListener('click', () => {
-    const d = new Date();
-    document.getElementById('month').value = d.getMonth() + 1;
-    populateDays(d.getDate());
-    triggerDataFetch();
+      const today = new Date();
+      const currentYear = 2026; 
+
+      document.getElementById('month').value = today.getMonth() + 1;
+      populateDays(today.getDate()); // Update the day dropdown options
+      document.getElementById('day').value = today.getDate();
+      document.getElementById('yearSelect').value = currentYear;
+
+      syncPeriodToYear(currentYear);
+      processAndPlot(); // Refresh everything
   });
 
   document.querySelectorAll('.period-btn').forEach(btn => {
@@ -615,23 +694,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function processAndPlot() {
     if (!fullDataset) return;
+
+    // 1. SET UP VARIABLES
     const mIdx = parseInt(document.getElementById('month').value);
     const dReq = parseInt(document.getElementById('day').value);
+    const sYear = parseInt(document.getElementById('yearSelect').value);
     const isF = document.getElementById('unitToggle').checked;
     const unit = isF ? "°F" : "°C";
     const convert = (v) => (v == null ? null : (isF ? (v * 9/5 + 32) : v));
     const monthName = monthNames[mIdx - 1];
-    
-    // Formatting the year range string based on selection
-    const rangeText = currentRange.start === 0 ? "All Available Data" : `${currentRange.start}–${currentRange.end}`;
-    const rangeHtml = `<br><span style="font-size:0.65rem; color:var(--sub-text); font-weight:400; text-transform:none;">${rangeText}</span>`;
+    const systemYear = 2026; 
+    const todayDate = new Date();
 
-    // Update labels for the Daily and Historical Monthly Average cards with the date range
+    // 2. UPDATE LABELS & RANGE TEXT
+    let startYear = parseInt(currentRange.start);
+    let endYear = parseInt(currentRange.end);
+
+    if (startYear === 0 || endYear >= 9999) {
+        const yearList = fullDataset.map(d => parseInt(d.DATE.split('-')[0])).filter(y => !isNaN(y));
+        startYear = Math.min(...yearList);
+        endYear = Math.max(...yearList);
+    }
+
+    const rangeText = `${startYear}–${endYear}`;
+    const rangeHtml = `<br><span style="font-size:0.65rem; color:var(--sub-text); font-weight:400; text-transform:none;">${rangeText} Normals</span>`;
+
     document.getElementById('dayMinLabel').innerHTML = `${monthName} ${dReq} Average Minimum Temperature ${rangeHtml}`;
-    document.getElementById('dayMaxLabel').innerHTML = `${monthName} ${dReq} Average Maximum Temperature ${rangeHtml}`;
-    document.getElementById('monMinLabel').innerHTML = `${monthName} Average Minimum Temperature ${rangeHtml}`;
-    document.getElementById('monMaxLabel').innerHTML = `${monthName} Average Maximum Temperature ${rangeHtml}`;
+    document.getElementById('dayMaxLabel').innerHTML = `${monthName} ${dReq} Avg Maximum Temperature ${rangeHtml}`;
+    document.getElementById('monMinLabel').innerHTML = `${monthName} Avgerage Minimum Temperature ${rangeHtml}`;
+    document.getElementById('monMaxLabel').innerHTML = `${monthName} Avgerage Maximum Temperature ${rangeHtml}`;
 
+    // 3. PROCESS DATA FOR CARDS AND BOX PLOTS
     const rawMonthData = fullDataset.filter(d => d.DATE && parseInt(d.DATE.split('-')[1]) === mIdx)
       .map(r => ({
         year: parseInt(r.DATE.split('-')[0]),
@@ -650,19 +743,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const finalAvgMax = getAvg(dailyReferenceValues.tmax);
     const finalAvgMin = getAvg(dailyReferenceValues.tmin);
 
-    // Update Daily Averages
     document.getElementById('avgMax').textContent = finalAvgMax + unit;
     document.getElementById('avgMin').textContent = finalAvgMin + unit;
-
-    // Update Historical Monthly Averages
     document.getElementById('monMax').textContent = getAvg(periodData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
     document.getElementById('monMin').textContent = getAvg(periodData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
 
-    // --- 2026 CURRENT MONTH CARDS UPDATES ---
-    const currYear = 2026;
-    const todayDate = new Date();
+    // 4. CURRENT 2026 MONTH CARDS
     const currentSystemMonth = todayDate.getMonth() + 1; 
-    
     const minCard2026 = document.getElementById('currMonthMin').parentElement;
     const maxCard2026 = document.getElementById('currMonthMax').parentElement;
 
@@ -672,30 +759,17 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         minCard2026.style.display = 'block';
         maxCard2026.style.display = 'block';
-        
-        const currYearData = rawMonthData.filter(d => d.year === currYear);
+        const currYearData = rawMonthData.filter(d => d.year === systemYear);
         const validDays = currYearData.filter(d => d.tmin !== null || d.tmax !== null).map(d => d.day);
+        let latestDateLabel = validDays.length > 0 ? `<br><span style="font-size:0.65rem; color:var(--sub-text); font-weight:400;">Latest Data: ${monthName} ${Math.max(...validDays)}, ${systemYear}</span>` : "";
         
-        let latestDateLabel = "";
-        if (validDays.length > 0) {
-            const latestDay = Math.max(...validDays);
-            // Updated color here to var(--sub-text)
-            latestDateLabel = `<br><span style="font-size:0.65rem; color:var(--sub-text); font-weight:400; text-transform:none;">Latest Data: ${monthName} ${latestDay}, ${currYear}</span>`;
-        }
-
-        document.getElementById('currMonthMinLabel').innerHTML = `${monthName} ${currYear} Average Minimum Temperature ${latestDateLabel}`;
-        document.getElementById('currMonthMaxLabel').innerHTML = `${monthName} ${currYear} Average Maximum Temperature ${latestDateLabel}`;
-
+        document.getElementById('currMonthMinLabel').innerHTML = `${monthName} ${systemYear} Avgerage Minimum Temperature ${latestDateLabel}`;
+        document.getElementById('currMonthMaxLabel').innerHTML = `${monthName} ${systemYear} Avgerage Maximum Temperature ${latestDateLabel}`;
         document.getElementById('currMonthMin').textContent = getAvg(currYearData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
         document.getElementById('currMonthMax').textContent = getAvg(currYearData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
     }
 
-    if (mIdx === (todayDate.getMonth() + 1) && dReq === todayDate.getDate()) {
-        fetchLiveComparison(lastStation.lat, lastStation.lon, finalAvgMax, finalAvgMin);
-    } else {
-        document.getElementById('liveRow').style.display = 'none';
-    }
-
+    // 5. BOX & LINE TREND PLOTS
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const baseLayout = { 
       paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
@@ -707,34 +781,177 @@ document.addEventListener('DOMContentLoaded', function() {
     if(dailyRows.length > 0) {
       Plotly.newPlot('boxDiv', [
         { 
-          y: dailyReferenceValues.tmin, 
-          text: dailyRows.filter(r => r.tmin !== null).map(r => r.year),
-          type:'box', name:'Min', boxpoints: 'all', jitter: 0.5, pointpos: -1.8,
-          marker: {color: '#74b9ff'}, hovertemplate: 'Year: %{text}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
+            y: dailyReferenceValues.tmin, type:'box', name:'Min', 
+            boxpoints: 'all', jitter: 0.5, pointpos: -1.8, marker: {color: '#74b9ff'} 
         },
         { 
-          y: dailyReferenceValues.tmax, 
-          text: dailyRows.filter(r => r.tmax !== null).map(r => r.year),
-          type:'box', name:'Max', boxpoints: 'all', jitter: 0.5, pointpos: 1.8,
-          marker: {color: '#ff7675'}, hovertemplate: 'Year: %{text}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
+            y: dailyReferenceValues.tmax, type:'box', name:'Max', 
+            boxpoints: 'all', jitter: 0.5, pointpos: 1.8, marker: {color: '#ff7675'} 
         }
-      ], { ...baseLayout, title: `<b>${monthName} ${dReq} Temperature Distribution</b>` });
+      ], { ...baseLayout, title: `<b>${monthName} ${dReq} Distribution</b>` });
 
       Plotly.newPlot('lineDiv', [
-        { 
-          x: dailyRows.map(r => r.year), y: dailyReferenceValues.tmax, 
-          text: dailyRows.map(r => r.year), type:'scatter', name:'Max', line: {color: '#ff7675'},
-          hovertemplate: 'Year: %{text}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
-        },
-        { 
-          x: dailyRows.map(r => r.year), y: dailyReferenceValues.tmin, 
-          text: dailyRows.map(r => r.year), type:'scatter', name:'Min', line: {color: '#74b9ff'},
-          hovertemplate: 'Year: %{text}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
-        }
+        { x: dailyRows.map(r => r.year), y: dailyReferenceValues.tmax, type:'scatter', name:'Max', line: {color: '#ff7675'} },
+        { x: dailyRows.map(r => r.year), y: dailyReferenceValues.tmin, type:'scatter', name:'Min', line: {color: '#74b9ff'} }
       ], { ...baseLayout, title: `<b>${monthName} ${dReq} Historical Trend</b>` });
     }
+
+    // 6. NEW CONTEXT WINDOW (±15 Days)
+// 6. RE-FIXED CONTEXT WINDOW
+    const selectedDate = new Date(sYear, mIdx - 1, dReq);
+    
+    // Check if we are looking at the current year (2026) and today's date
+    const isCurrentEnd = (sYear === 2026 && mIdx === 1 && dReq === 31);
+
+    const yearSlice = fullDataset.filter(d => {
+        const p = d.DATE.split('-');
+        const dDate = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+        
+        if (isCurrentEnd) {
+            // If it's today, show the last 30 days so the chart is full
+            return parseInt(p[0]) === 2026 && (selectedDate - dDate) / 86400000 <= 30 && (selectedDate - dDate) >= 0;
+        } else {
+            // Otherwise, use your original ±15 day window
+            return parseInt(p[0]) === sYear && Math.abs(dDate - selectedDate) / 86400000 <= 15;
+        }
+    });
+
+    // Re-sync the labels and historical averages
+    const windowLabels = yearSlice.map(d => d.DATE.split('-').slice(1).join('/'));
+    const historicalAverages = windowLabels.map(label => {
+        const [m, d] = label.split('/').map(Number);
+        const matches = fullDataset.filter(row => {
+            const p = row.DATE.toString().split('-');
+            return parseInt(p[1]) === m && parseInt(p[2]) === d && 
+                   parseInt(p[0]) >= (currentRange.start === 0 ? 1900 : currentRange.start) && 
+                   parseInt(p[0]) <= (currentRange.end >= 9000 ? 2025 : currentRange.end);
+        });
+        return {
+            avgMax: matches.length ? convert(matches.reduce((a, b) => a + (b.TMAX/10), 0) / matches.length) : null,
+            avgMin: matches.length ? convert(matches.reduce((a, b) => a + (b.TMIN/10), 0) / matches.length) : null
+        };
+    });
+
+    // 7. LIVE ROW GATEKEEPER
+    const isToday = (mIdx === (todayDate.getMonth() + 1)) && (dReq === todayDate.getDate()) && (sYear === systemYear);
+    if (isToday) {
+        fetchLiveComparison(lastStation.lat, lastStation.lon, finalAvgMax, finalAvgMin);
+    } else {
+        document.getElementById('liveRow').style.display = 'none';
+    }
+
+    // 8. RENDER THE ±15 DAY CHARTS
+    renderWindowCharts(yearSlice, historicalAverages, sYear, windowLabels);
   }
-  window.addEventListener('resize', () => { Plotly.Plots.resize('boxDiv'); Plotly.Plots.resize('lineDiv'); });
+
+  function renderWindowCharts(yearSlice, histAverages, sYear, labels) {
+      const isF = document.getElementById('unitToggle').checked;
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      const tempUnit = isF ? "°F" : "°C";
+      const precipUnit = isF ? "in" : "mm";
+
+      // 1. Temperature conversion helper
+      const convertTemp = (v) => (v === null ? null : (isF ? (v * 9/5 + 32) : v));
+
+      // 2. Precipitation conversion helper (Input is tenths of mm)
+      const convertPrecip = (v) => {
+          if (v == null) return 0;
+          const mm = v / 10;
+          // If Fahrenheit is selected, we assume the user wants Inches for rain
+          return isF ? parseFloat((mm * 0.0393701).toFixed(2)) : parseFloat(mm.toFixed(1));
+      };
+
+      // Temperature Traces
+      const tempTraces = [
+          { 
+              x: labels, y: yearSlice.map(d => convertTemp(d.TMAX/10)), 
+              name: `${sYear} Max`, mode: 'lines+markers', 
+              line: {color: '#ff7675', width: 3}, marker: {size: 6}
+          },
+          { 
+              x: labels, y: yearSlice.map(d => convertTemp(d.TMIN/10)), 
+              name: `${sYear} Min`, mode: 'lines+markers', 
+              line: {color: '#74b9ff', width: 3}, marker: {size: 6}
+          },
+          { 
+              x: labels, y: histAverages.map(h => h.avgMax), 
+              name: `Normal Max`, mode: 'lines', 
+              line: {color: '#ff7675', dash: 'dot', width: 1.5} 
+          },
+          { 
+              x: labels, y: histAverages.map(h => h.avgMin), 
+              name: `Normal Min`, mode: 'lines', 
+              line: {color: '#74b9ff', dash: 'dot', width: 1.5} 
+          }
+      ];
+
+      // Shared Layout Logic
+      const baseLayout = {
+          paper_bgcolor: 'rgba(0,0,0,0)',
+          plot_bgcolor: 'rgba(0,0,0,0)',
+          font: { 
+              color: isDark ? "#e0e0e0" : "#636e72", 
+              family: 'Inter, sans-serif',
+              size: 11
+          },
+          xaxis: { 
+              tickangle: -45, 
+              gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+              automargin: true 
+          },
+          margin: { t: 60, b: 80, l: 50, r: 20 },
+          legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.4 },
+          hovermode: 'closest'
+      };
+
+      // Render Temperature Chart
+      Plotly.react('windowTempDiv', tempTraces, { 
+          ...baseLayout, 
+          title: `<b>${sYear} vs ${currentRange.start}-${currentRange.end} Normals</b>`,
+          yaxis: { 
+              title: tempUnit, 
+              gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' 
+          }
+      });
+
+      // Precipitation Trace
+      const totalPrecip = yearSlice.reduce((sum, d) => sum + convertPrecip(d.PRCP), 0).toFixed(2);
+
+      const precipTrace = {
+          x: labels, 
+          y: yearSlice.map(d => convertPrecip(d.PRCP)), 
+          type: 'bar', 
+          marker: {
+              color: '#0984e3', 
+              opacity: 0.7,
+              line: { color: '#0984e3', width: 1 }
+          }, 
+          name: 'Daily Precip',
+          hovertemplate: `Date: %{x}<br>Amount: %{y} ${precipUnit}<extra></extra>`
+      };
+
+      // Render Precipitation Chart
+      Plotly.react('windowPrecipDiv', [precipTrace], { 
+          ...baseLayout, 
+          title: `<b>${sYear} Precipitation (Total: ${totalPrecip} ${precipUnit})</b>`, 
+          yaxis: { 
+              title: precipUnit, 
+              gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' 
+          }
+      });
+    // Force the data to fill the new container dimensions
+    Plotly.Plots.resize('windowTempDiv');
+    Plotly.Plots.resize('windowPrecipDiv');
+  }  
+  
+  window.addEventListener('resize', () => { 
+      const charts = ['boxDiv', 'lineDiv', 'windowTempDiv', 'windowPrecipDiv'];
+      charts.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) Plotly.Plots.resize(el);
+      });
+  });
 });
 </script>
 </body>
