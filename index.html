@@ -723,6 +723,12 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
     const systemYear = 2026; 
     const todayDate = new Date();
 
+    const getStdDev = (values) => {
+        if (!values || values.length === 0) return 0;
+        const avg = values.reduce((a, b) => a + b, 0) / values.length;
+        return Math.sqrt(values.reduce((s, v) => s + Math.pow(v - avg, 2), 0) / values.length);
+    };
+
     // 2. UPDATE LABELS & RANGE TEXT
     let startYear = parseInt(currentRange.start);
     let endYear = parseInt(currentRange.end);
@@ -802,6 +808,9 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
       // Create year arrays that match the filtered temperature points
       const yearsMin = dailyRows.filter(r => r.tmin !== null).map(r => r.year);
       const yearsMax = dailyRows.filter(r => r.tmax !== null).map(r => r.year);
+      const tmaxStd = getStdDev(dailyReferenceValues.tmax);
+      const tminStd = getStdDev(dailyReferenceValues.tmin);
+      const xYears = dailyRows.map(r => r.year);
 
       Plotly.newPlot('boxDiv', [
         { 
@@ -826,26 +835,80 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
             marker: {color: '#ff7675'},
             hovertemplate: 'Year: %{text}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
         }
-      ], { ...baseLayout, title: `<b>${monthName} ${dReq} Distribution (${rangeText})</b>` });
+      ], { ...baseLayout, title: `<b>${monthName} ${dReq} Temperature Distribution (${rangeText})</b>` });
 
       Plotly.newPlot('lineDiv', [
-        { 
-            x: dailyRows.map(r => r.year), 
-            y: dailyReferenceValues.tmax, 
-            type: 'scatter', 
-            name: 'Max', 
-            line: {color: '#ff7675'},
-            hovertemplate: 'Year: %{x}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
-        },
-        { 
-            x: dailyRows.map(r => r.year), 
-            y: dailyReferenceValues.tmin, 
-            type: 'scatter', 
-            name: 'Min', 
-            line: {color: '#74b9ff'},
-            hovertemplate: 'Year: %{x}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
-        }
-      ], { ...baseLayout, title: `<b>${monthName} ${dReq} Historical Trend (${rangeText})</b>` });
+          // --- LAYER 1: Normal Range Ribbons (Background) ---
+          {
+              x: xYears.concat([...xYears].reverse()),
+              y: Array(xYears.length).fill(parseFloat(finalAvgMax) + tmaxStd)
+                  .concat(Array(xYears.length).fill(parseFloat(finalAvgMax) - tmaxStd).reverse()),
+              fill: 'toself',
+              fillcolor: 'rgba(255, 118, 117, 0.1)',
+              line: {color: 'transparent'},
+              name: 'Normal Range (Max)',
+              showlegend: false, // Cleaner: hide the "shading" from the legend
+              hoverinfo: 'skip'
+          },
+          {
+              x: xYears.concat([...xYears].reverse()),
+              y: Array(xYears.length).fill(parseFloat(finalAvgMin) + tminStd)
+                  .concat(Array(xYears.length).fill(parseFloat(finalAvgMin) - tminStd).reverse()),
+              fill: 'toself',
+              fillcolor: 'rgba(116, 185, 255, 0.1)',
+              line: {color: 'transparent'},
+              name: 'Normal Range (Min)',
+              showlegend: false, // Cleaner: hide the "shading" from the legend
+              hoverinfo: 'skip'
+          },
+          // --- LAYER 2: Dashed Normal Reference Lines ---
+          {
+              x: xYears,
+              y: Array(xYears.length).fill(finalAvgMin),
+              type: 'scatter', mode: 'lines',
+              name: `Normal Min Temp (${rangeText})`,
+              line: {color: '#74b9ff', dash: 'dot', width: 1.5},
+              legendrank: 1001,
+              connectgaps: true, hoverinfo: 'skip'
+          },
+          {
+              x: xYears,
+              y: Array(xYears.length).fill(finalAvgMax),
+              type: 'scatter', mode: 'lines',
+              name: `Normal Max Temp (${rangeText})`,
+              line: {color: '#ff7675', dash: 'dot', width: 1.5},
+              legendrank: 1000, // Higher number = pushes to the end of the legend
+              connectgaps: true, hoverinfo: 'skip'
+          },
+
+          // --- LAYER 3: Historical Data Lines (Foreground) ---
+          { 
+              x: xYears, 
+              y: dailyReferenceValues.tmin, 
+              text: dailyRows.map(r => getSigmaClassification(convert(r.tmin), finalAvgMin, dailyReferenceValues.tmin)),
+              type: 'scatter', 
+              name: 'Minimum Temperature', 
+              line: {color: '#74b9ff', width: 2},
+              legendrank: 11,
+              hovertemplate: 'Year: %{x}<br>Temp: %{y:.1f}' + unit + '<br><b>%{text}</b><extra></extra>'
+          },
+          { 
+              x: xYears, 
+              y: dailyReferenceValues.tmax, 
+              text: dailyRows.map(r => getSigmaClassification(convert(r.tmax), finalAvgMax, dailyReferenceValues.tmax)),
+              type: 'scatter', 
+              name: 'Maximum Temperature', 
+              line: {color: '#ff7675', width: 2},
+              legendrank: 10, // Lower number = stays at the front
+              hovertemplate: 'Year: %{x}<br>Temp: %{y:.1f}' + unit + '<br><b>%{text}</b><extra></extra>'
+          }
+
+      ], { 
+          ...baseLayout, 
+          title: `<b>${monthName} ${dReq} Temperature Historical Trend (${rangeText})</b>`,
+          margin: { ...baseLayout.margin, b: 80 },
+          legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.4 }
+      });
     }
     // 6. NEW CONTEXT WINDOW (±15 Days)
     const selectedDate = new Date(sYear, mIdx - 1, dReq);
@@ -876,9 +939,16 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
                    parseInt(p[0]) >= (currentRange.start === 0 ? 1900 : currentRange.start) && 
                    parseInt(p[0]) <= (currentRange.end >= 9000 ? 2025 : currentRange.end);
         });
+
+        // Convert raw values for the SD calculation
+        const tmaxVals = matches.map(r => convert(r.TMAX/10)).filter(v => v !== null);
+        const tminVals = matches.map(r => convert(r.TMIN/10)).filter(v => v !== null);
+
         return {
-            avgMax: matches.length ? convert(matches.reduce((a, b) => a + (b.TMAX/10), 0) / matches.length) : null,
-            avgMin: matches.length ? convert(matches.reduce((a, b) => a + (b.TMIN/10), 0) / matches.length) : null
+            avgMax: tmaxVals.length ? (tmaxVals.reduce((a, b) => a + b, 0) / tmaxVals.length) : null,
+            avgMin: tminVals.length ? (tminVals.reduce((a, b) => a + b, 0) / tminVals.length) : null,
+            stdMax: getStdDev(tmaxVals), // Using your helper
+            stdMin: getStdDev(tminVals)  // Using your helper
         };
     });
 
@@ -894,114 +964,112 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
     renderWindowCharts(yearSlice, historicalAverages, sYear, windowLabels, rangeText);
   }
 
-  function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText) {
-      const isF = document.getElementById('unitToggle').checked;
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText) {
+    const isF = document.getElementById('unitToggle').checked;
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-      const tempUnit = isF ? "°F" : "°C";
-      const precipUnit = isF ? "in" : "mm";
+    const tempUnit = isF ? "°F" : "°C";
+    const precipUnit = isF ? "in" : "mm";
 
-      // 1. Temperature conversion helper
-      const convertTemp = (v) => (v === null ? null : (isF ? (v * 9/5 + 32) : v));
+    const convertTemp = (v) => (v === null ? null : (isF ? (v * 9/5 + 32) : v));
+    const convertPrecip = (v) => {
+        if (v == null) return 0;
+        const mm = v / 10;
+        return isF ? parseFloat((mm * 0.0393701).toFixed(2)) : parseFloat(mm.toFixed(1));
+    };
 
-      // 2. Precipitation conversion helper (Input is tenths of mm)
-      const convertPrecip = (v) => {
-          if (v == null) return 0;
-          const mm = v / 10;
-          // If Fahrenheit is selected, we assume the user wants Inches for rain
-          return isF ? parseFloat((mm * 0.0393701).toFixed(2)) : parseFloat(mm.toFixed(1));
-      };
+    // Ribbon Math (using histAverages to match parameter name)
+    const xDouble = labels.concat([...labels].reverse());
+    const maxRibbonY = histAverages.map(h => h.avgMax + h.stdMax)
+        .concat([...histAverages].reverse().map(h => h.avgMax - h.stdMax));
+    const minRibbonY = histAverages.map(h => h.avgMin + h.stdMin)
+        .concat([...histAverages].reverse().map(h => h.avgMin - h.stdMin));
 
-      // Temperature Traces
+    const tempTraces = [
+        // LAYER 1: Ribbons (Background)
+        {
+            x: xDouble, y: maxRibbonY, fill: 'toself',
+            fillcolor: 'rgba(255, 118, 117, 0.1)', line: {color: 'transparent'},
+            name: 'Normal Range (Max)', showlegend: false, hoverinfo: 'skip'
+        },
+        {
+            x: xDouble, y: minRibbonY, fill: 'toself',
+            fillcolor: 'rgba(116, 185, 255, 0.1)', line: {color: 'transparent'},
+            name: 'Normal Range (Min)', showlegend: false, hoverinfo: 'skip'
+        },
+        // LAYER 2: Your Original Data Traces (Foreground)
+        { 
+            x: labels, y: yearSlice.map(d => convertTemp(d.TMAX/10)), 
+            text: yearSlice.map((d, i) => getSigmaClassification(convertTemp(d.TMAX/10), histAverages[i].avgMax, dailyReferenceValues.tmax)),
+            name: `${sYear} Maximum Temperature`, mode: 'lines+markers', 
+            line: {color: '#ff7675', width: 3}, marker: {size: 6},
+            hovertemplate: 'Date: %{x}/' + sYear + '<br>Temp: %{y:.1f}' + tempUnit + '<br><b>%{text}</b><extra></extra>'
+        },
+        { 
+            x: labels, y: yearSlice.map(d => convertTemp(d.TMIN/10)), 
+            text: yearSlice.map((d, i) => getSigmaClassification(convertTemp(d.TMIN/10), histAverages[i].avgMin, dailyReferenceValues.tmin)),
+            name: `${sYear} Minimum Temperature`, mode: 'lines+markers', 
+            line: {color: '#74b9ff', width: 3}, marker: {size: 6},
+            hovertemplate: 'Date: %{x}/' + sYear + '<br>Temp: %{y:.1f}' + tempUnit + '<br><b>%{text}</b><extra></extra>'
+        },
+        { 
+            x: labels, y: histAverages.map(h => h.avgMax), 
+            name: `Normal Maximum Temperature`, mode: 'lines', 
+            line: {color: '#ff7675', dash: 'dot', width: 1.5},
+            hovertemplate: 'Normal Maximum Temperature<br>Date: %{x}<br>Temp: %{y:.1f}' + tempUnit + '<extra></extra>'
+        },
+        { 
+            x: labels, y: histAverages.map(h => h.avgMin), 
+            name: `Normal Minimum Temperature`, mode: 'lines', 
+            line: {color: '#74b9ff', dash: 'dot', width: 1.5},
+            hovertemplate: 'Normal Minimum Temperature<br>Date: %{x}<br>Temp: %{y:.1f}' + tempUnit + '<extra></extra>'
+        }
+    ];
 
-      const tempTraces = [
-          { 
-              x: labels, y: yearSlice.map(d => convertTemp(d.TMAX/10)), 
-              text: yearSlice.map((d, i) => getSigmaClassification(convertTemp(d.TMAX/10), histAverages[i].avgMax, dailyReferenceValues.tmax)),
-              name: `${sYear} Maximum Temperature`, mode: 'lines+markers', 
-              line: {color: '#ff7675', width: 3}, marker: {size: 6},
-              // Changed to show Date: MM/DD/YYYY
-              hovertemplate: 'Date: %{x}/' + sYear + '<br>Temp: %{y:.1f}' + tempUnit + '<br><b>%{text}</b><extra></extra>'
-          },
-          { 
-              x: labels, y: yearSlice.map(d => convertTemp(d.TMIN/10)), 
-              text: yearSlice.map((d, i) => getSigmaClassification(convertTemp(d.TMIN/10), histAverages[i].avgMin, dailyReferenceValues.tmin)),
-              name: `${sYear} Minimum Temperature`, mode: 'lines+markers', 
-              line: {color: '#74b9ff', width: 3}, marker: {size: 6},
-              hovertemplate: 'Date: %{x}/' + sYear + '<br>Temp: %{y:.1f}' + tempUnit + '<br><b>%{text}</b><extra></extra>'
-          },
-          { 
-              x: labels, y: histAverages.map(h => h.avgMax), 
-              name: `Normal Maximum Temperature`, mode: 'lines', 
-              line: {color: '#ff7675', dash: 'dot', width: 1.5},
-              hovertemplate: 'Normal Maximum Temperature<br>Date: %{x}<br>Temp: %{y:.1f}' + tempUnit + '<extra></extra>'
-          },
-          { 
-              x: labels, y: histAverages.map(h => h.avgMin), 
-              name: `Normal Minimum Temperature`, mode: 'lines', 
-              line: {color: '#74b9ff', dash: 'dot', width: 1.5},
-              hovertemplate: 'Normal Minimum Temperature<br>Date: %{x}<br>Temp: %{y:.1f}' + tempUnit + '<extra></extra>'
-          }
-      ];
+    const baseLayout = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: isDark ? "#e0e0e0" : "#636e72", family: 'Inter, sans-serif', size: 11 },
+        xaxis: { 
+            tickangle: -45, 
+            gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+            automargin: true 
+        },
+        margin: { t: 60, b: 80, l: 50, r: 20 },
+        legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.4 },
+        hovermode: 'closest'
+    };
 
-      // Shared Layout Logic
-      const baseLayout = {
-          paper_bgcolor: 'rgba(0,0,0,0)',
-          plot_bgcolor: 'rgba(0,0,0,0)',
-          font: { 
-              color: isDark ? "#e0e0e0" : "#636e72", 
-              family: 'Inter, sans-serif',
-              size: 11
-          },
-          xaxis: { 
-              tickangle: -45, 
-              gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-              automargin: true 
-          },
-          margin: { t: 60, b: 80, l: 50, r: 20 },
-          legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.4 },
-          hovermode: 'closest'
-      };
+    Plotly.react('windowTempDiv', tempTraces, { 
+        ...baseLayout, 
+        title: `<b>${sYear} Temperature vs ${rangeText} Normals</b>`,
+        yaxis: { 
+            title: tempUnit, 
+            gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' 
+        }
+    });
 
-      // Render Temperature Chart
-      Plotly.react('windowTempDiv', tempTraces, { 
-          ...baseLayout, 
-          title: `<b>${sYear} Temperature vs ${rangeText} Normals</b>`,
-          yaxis: { 
-              title: tempUnit, 
-              gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' 
-          }
-      });
+    const totalPrecip = yearSlice.reduce((sum, d) => sum + convertPrecip(d.PRCP), 0).toFixed(2);
+    const precipTrace = {
+        x: labels, y: yearSlice.map(d => convertPrecip(d.PRCP)), 
+        type: 'bar', 
+        marker: { color: '#0984e3', opacity: 0.7, line: { color: '#0984e3', width: 1 } }, 
+        name: 'Daily Precip',
+        hovertemplate: `Date: %{x}<br>Amount: %{y} ${precipUnit}<extra></extra>`
+    };
 
-      // Precipitation Trace
-      const totalPrecip = yearSlice.reduce((sum, d) => sum + convertPrecip(d.PRCP), 0).toFixed(2);
+    Plotly.react('windowPrecipDiv', [precipTrace], { 
+        ...baseLayout, 
+        title: `<b>${sYear} Precipitation (Total: ${totalPrecip} ${precipUnit})</b>`, 
+        yaxis: { 
+            title: precipUnit, 
+            gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' 
+        }
+    });
 
-      const precipTrace = {
-          x: labels, 
-          y: yearSlice.map(d => convertPrecip(d.PRCP)), 
-          type: 'bar', 
-          marker: {
-              color: '#0984e3', 
-              opacity: 0.7,
-              line: { color: '#0984e3', width: 1 }
-          }, 
-          name: 'Daily Precip',
-          hovertemplate: `Date: %{x}<br>Amount: %{y} ${precipUnit}<extra></extra>`
-      };
-
-      // Render Precipitation Chart
-      Plotly.react('windowPrecipDiv', [precipTrace], { 
-          ...baseLayout, 
-          title: `<b>${sYear} Precipitation (Total: ${totalPrecip} ${precipUnit})</b>`, 
-          yaxis: { 
-              title: precipUnit, 
-              gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' 
-          }
-      });
-    // Force the data to fill the new container dimensions
     Plotly.Plots.resize('windowTempDiv');
     Plotly.Plots.resize('windowPrecipDiv');
-  }  
+}
   
   window.addEventListener('resize', () => { 
       const charts = ['boxDiv', 'lineDiv', 'windowTempDiv', 'windowPrecipDiv'];
