@@ -191,6 +191,15 @@
 
     #plots { display: flex; justify-content: center; padding: 0 4%; flex-wrap: wrap; gap: 20px; margin-bottom: 60px; }
     #boxDiv, #lineDiv { background: var(--card-bg); padding: 15px; border-radius: 20px; width: 46%; height: 400px; min-width: 380px; border: 1px solid var(--border); }
+
+    #liveRow { display: none; margin-bottom: 30px; }
+
+    #todayBtn.is-today {
+        background-color: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
   </style>
 </head>
 <body>
@@ -234,7 +243,7 @@
   <button class="period-btn" data-start="0" data-end="9999">All Data</button>
 </div>
 
-<div class="stats-section" id="liveRow" style="display:none; margin-bottom: 30px;">
+<div class="stats-section" id="liveRow" style="margin-bottom: 30px;">
     <div class="stats-row">
         <div class="stat-card" style="border-bottom: 4px solid var(--min-color);">
             <span class="stat-label" id="liveMinLabel">Today's Observed Minimum Temperature</span>
@@ -952,17 +961,39 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
         };
     });
 
-    // 7. LIVE ROW GATEKEEPER
+    // --- 7. UPDATED GATEKEEPER: LIVE OR HISTORICAL OBSERVATION ---
+    const todayBtn = document.getElementById('todayBtn');
     const isToday = (mIdx === (todayDate.getMonth() + 1)) && (dReq === todayDate.getDate()) && (sYear === systemYear);
+
     if (isToday) {
+        todayBtn.classList.add('is-today');
         fetchLiveComparison(lastStation.lat, lastStation.lon, finalAvgMax, finalAvgMin);
     } else {
-        document.getElementById('liveRow').style.display = 'none';
-    }
+        todayBtn.classList.remove('is-today');
+        const historicalObs = rawMonthData.find(d => d.year === sYear && d.day === dReq);
+        const liveRow = document.getElementById('liveRow');
 
-    // 8. RENDER THE ±15 DAY CHARTS
+        if (historicalObs && (historicalObs.tmin !== null || historicalObs.tmax !== null)) {
+            liveRow.style.display = 'flex';
+            
+            const dispHigh = convert(historicalObs.tmax);
+            const dispLow = convert(historicalObs.tmin);
+            const datePrefix = `${monthName} ${dReq}, ${sYear}`;
+
+            document.getElementById('liveMin').textContent = dispLow !== null ? dispLow.toFixed(1) + unit : "--";
+            document.getElementById('liveMax').textContent = dispHigh !== null ? dispHigh.toFixed(1) + unit : "--";
+
+            document.getElementById('liveMinLabel').innerHTML = `${datePrefix} Observed Minimum Temperature`;
+            document.getElementById('liveMaxLabel').innerHTML = `${datePrefix} Observed Maximum Temperature`;
+
+            updateDepartureBadge('liveMinDep', dispLow, finalAvgMin, dailyReferenceValues.tmin);
+            updateDepartureBadge('liveMaxDep', dispHigh, finalAvgMax, dailyReferenceValues.tmax);
+        } else {
+            liveRow.style.display = 'none';
+        }
+    }
     renderWindowCharts(yearSlice, historicalAverages, sYear, windowLabels, rangeText);
-  }
+}
 
 function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText) {
     const isF = document.getElementById('unitToggle').checked;
