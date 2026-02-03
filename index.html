@@ -117,6 +117,52 @@
         border: 1px solid var(--border) !important;
     }
 
+    .legend {
+        padding: 10px;
+        /* 0.8 is the opacity (0.0 = clear, 1.0 = solid) */
+        background: rgba(255, 255, 255, 0.7); 
+        backdrop-filter: blur(4px); /* Optional: adds a nice blur effect to the map behind it */
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        line-height: 1.5;
+        color: #2d3436; /* Dark text for contrast */
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        .legend {
+            background: rgba(45, 52, 54, 0.7);
+            color: #dfe6e9;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    }
+
+    .legend {
+        padding: 10px;
+        /* Dark grey with high transparency (0.4) */
+        background: rgba(20, 20, 20, 0.4) !important; 
+        /* Remove blur/frost */
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        /* Dark, subtle border instead of light frost */
+        border: 1px solid rgba(0, 0, 0, 0.5); 
+        border-radius: 6px;
+        line-height: 1.6;
+        color: #ffffff; 
+        box-shadow: none;
+        font-size: 0.75rem;
+    }
+    
+    .legend i {
+        width: 10px;
+        height: 10px;
+        float: left;
+        margin-right: 8px;
+        margin-top: 5px;
+        border-radius: 50%;
+    }
+
     #controls { 
       margin: 0 auto 25px auto; 
       padding: 15px 20px; 
@@ -294,6 +340,23 @@ document.addEventListener('DOMContentLoaded', function() {
   const map = L.map('map', { zoomSnap: 0.5 }).setView([35.5, -80], 7);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
   const markers = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 40 });
+
+  const legend = L.control({ position: 'bottomright' });
+  
+  legend.onAdd = function (map) {
+      const div = L.DomUtil.create('div', 'legend');
+      
+      // Using a template string to keep it clean
+      div.innerHTML = `
+          <strong style="display:block; margin-bottom:5px; font-size:0.75rem;">Station Type</strong>
+          <div><i style="background: #10ac84;"></i>COOP (USC)</div>
+          <div><i style="background: #f39c12;"></i>RAWS (USR)</div>
+          <div><i style="background: #2e86de;"></i>ASOS/AWOS (USW)</div>
+      `;
+      return div;
+  };
+
+legend.addTo(map);
 
   // Define a custom Leaflet Control
   const LocateControl = L.Control.extend({
