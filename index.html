@@ -1156,10 +1156,21 @@ function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText) {
     });
 
     const totalPrecip = yearSlice.reduce((sum, d) => sum + convertPrecip(d.PRCP), 0).toFixed(2);
+
+    const filteredPrecipData = yearSlice.map(d => ({
+        dateLabel: d.DATE.split('-').slice(1).join('/'),
+        value: convertPrecip(d.PRCP)
+    })).filter(item => item.value > 0);
+
     const precipTrace = {
-        x: labels, y: yearSlice.map(d => convertPrecip(d.PRCP)), 
+        x: filteredPrecipData.map(d => d.dateLabel),
+        y: filteredPrecipData.map(d => d.value),
         type: 'bar', 
-        marker: { color: '#0984e3', opacity: 0.7, line: { color: '#0984e3', width: 1 } }, 
+        marker: { 
+            color: '#0984e3', 
+            opacity: 0.7, 
+            line: { color: '#0984e3', width: 1 } 
+        }, 
         name: 'Daily Precip',
         hovertemplate: `Date: %{x}<br>Amount: %{y} ${precipUnit}<extra></extra>`
     };
@@ -1171,10 +1182,16 @@ function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText) {
             x: 0.5,
             xanchor: 'center'
         },
+        xaxis: {
+            ...baseLayout.xaxis,
+            type: 'category',
+            tickvals: labels 
+        },
         yaxis: { 
             title: precipUnit, 
             gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
             rangemode: 'nonnegative',
+            zeroline: false,
             fixedrange: false
         }
     });
