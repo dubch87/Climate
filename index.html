@@ -1136,7 +1136,11 @@ function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText) {
 
     Plotly.react('windowTempDiv', tempTraces, { 
         ...baseLayout, 
-        title: `<b>${sYear} Temperature vs ${rangeText} Normals</b>`,
+        title: {
+            text: `<b>${sYear} Temperature vs ${rangeText} Normals</b><br>${lastStation.name}, ${lastStation.state}`,
+            x: 0.5,
+            xanchor: 'center'
+        },
         yaxis: { 
             title: tempUnit, 
             gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' 
@@ -1154,7 +1158,11 @@ function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText) {
 
     Plotly.react('windowPrecipDiv', [precipTrace], { 
         ...baseLayout, 
-        title: `<b>${sYear} Precipitation (Total: ${totalPrecip} ${precipUnit})</b>`, 
+        title: {
+            text: `<b>${sYear} Precipitation (Total: ${totalPrecip} ${precipUnit})</b><br>${lastStation.name}, ${lastStation.state}`,
+            x: 0.5,
+            xanchor: 'center'
+        },
         yaxis: { 
             title: precipUnit, 
             gridcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
