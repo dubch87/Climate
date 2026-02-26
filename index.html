@@ -907,8 +907,12 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
             marker: {color: '#ff7675'},
             hovertemplate: 'Year: %{text}<br>Temp: %{y:.1f}' + unit + '<extra></extra>'
         }
-      ], { ...baseLayout, title: `<b>${monthName} ${dReq} Temperature Distribution (${rangeText})</b>` });
-
+      ], { ...baseLayout, title: {
+            text: `<b>${monthName} ${dReq} Temperature Distribution (${rangeText})</b><br>${lastStation.name}, ${lastStation.state}`,
+            x: 0.5,
+            xanchor: 'center'
+      }
+        });
       Plotly.newPlot('lineDiv', [
           // --- LAYER 1: Normal Range Ribbons (Background) ---
           {
@@ -977,9 +981,13 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
 
       ], { 
           ...baseLayout, 
-          title: `<b>${monthName} ${dReq} Temperature Historical Trend (${rangeText})</b>`,
-          margin: { ...baseLayout.margin, b: 80 },
-          legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.4 }
+          title: {
+            text: `<b>${monthName} ${dReq} Temperature Historical Trend (${rangeText})</b><br>${lastStation.name}, ${lastStation.state}`,
+            x: 0.5,
+            xanchor: 'center',
+          },
+            margin: { ...baseLayout.margin, b: 80 },
+            legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.4 }
       });
     }
     // 6. NEW CONTEXT WINDOW (±15 Days)
