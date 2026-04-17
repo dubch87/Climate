@@ -485,6 +485,7 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
     document.getElementById('monMinLabel').innerHTML = `${monthName} Average Minimum Temperature ${rangeHtml}`;
     document.getElementById('monMaxLabel').innerHTML = `${monthName} Average Maximum Temperature ${rangeHtml}`;
 
+
     // 3. PROCESS DATA FOR CARDS AND BOX PLOTS
     const rawMonthData = fullDataset.filter(d => d.DATE && parseInt(d.DATE.split('-')[1]) === mIdx)
       .map(r => ({
@@ -508,6 +509,44 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
     document.getElementById('avgMin').textContent = finalAvgMin + unit;
     document.getElementById('monMax').textContent = getAvg(periodData.map(r => convert(r.tmax)).filter(v => v !== null)) + unit;
     document.getElementById('monMin').textContent = getAvg(periodData.map(r => convert(r.tmin)).filter(v => v !== null)) + unit;
+
+    // RECORD HIGH/LOW — uses ALL data (rawMonthData has no year filter)
+    const allDayRows = rawMonthData.filter(d => d.day === dReq);
+
+    const recDayMaxRow = allDayRows.reduce((rec, r) => r.tmax !== null && (rec === null || r.tmax > rec.tmax) ? r : rec, null);
+    const recDayMinRow = allDayRows.reduce((rec, r) => r.tmin !== null && (rec === null || r.tmin < rec.tmin) ? r : rec, null);
+    const recMonMaxRow = rawMonthData.reduce((rec, r) => r.tmax !== null && (rec === null || r.tmax > rec.tmax) ? r : rec, null);
+    const recMonMinRow = rawMonthData.reduce((rec, r) => r.tmin !== null && (rec === null || r.tmin < rec.tmin) ? r : rec, null);
+
+    const yearSmall = (text) => `<br><span style="font-size:0.65rem; color:var(--sub-text); font-weight:400; text-transform:none;">${text}</span>`;
+
+    document.getElementById('recDayMinLabel').innerHTML = `${monthName} ${dReq} Record Minimum Temperature${recDayMinRow ? yearSmall(`Set in ${recDayMinRow.year}`) : ''}`;
+    document.getElementById('recDayMaxLabel').innerHTML = `${monthName} ${dReq} Record Maximum Temperature${recDayMaxRow ? yearSmall(`Set in ${recDayMaxRow.year}`) : ''}`;
+    document.getElementById('recDayMin').textContent = recDayMinRow ? convert(recDayMinRow.tmin).toFixed(1) + unit : "--";
+    document.getElementById('recDayMax').textContent = recDayMaxRow ? convert(recDayMaxRow.tmax).toFixed(1) + unit : "--";
+
+    document.getElementById('recMonMinLabel').innerHTML = `${monthName} Record Minimum Temperature${recMonMinRow ? yearSmall(`Set in ${recMonMinRow.year} (${monthName} ${recMonMinRow.day})`) : ''}`;
+    document.getElementById('recMonMaxLabel').innerHTML = `${monthName} Record Maximum Temperature${recMonMaxRow ? yearSmall(`Set in ${recMonMaxRow.year} (${monthName} ${recMonMaxRow.day})`) : ''}`;
+    document.getElementById('recMonMin').textContent = recMonMinRow ? convert(recMonMinRow.tmin).toFixed(1) + unit : "--";
+    document.getElementById('recMonMax').textContent = recMonMaxRow ? convert(recMonMaxRow.tmax).toFixed(1) + unit : "--";
+
+    // PRECIPITATION TOTALS
+    const precipUnit = isF ? "in" : "mm";
+    const convertPrecip = (v) => {
+        if (v == null) return 0;
+        const mm = v / 10;
+        return isF ? parseFloat((mm * 0.0393701).toFixed(2)) : parseFloat(mm.toFixed(1));
+    };
+
+    const monthPrecipTotal = fullDataset
+        .filter(d => { const p = d.DATE.split('-'); return parseInt(p[0]) === sYear && parseInt(p[1]) === mIdx; })
+        .reduce((sum, d) => sum + convertPrecip(d.PRCP), 0);
+
+    const yearPrecipTotal = fullDataset
+        .filter(d => parseInt(d.DATE.split('-')[0]) === sYear)
+        .reduce((sum, d) => sum + convertPrecip(d.PRCP), 0);
+
+    const yearLabel = sYear === systemYear ? 'Year-to-Date' : 'Annual';
 
 // 4. CURRENT 2026 MONTH CARDS (Only show if 2026 is selected)
     const currentSystemMonth = todayDate.getMonth() + 1; 
@@ -729,10 +768,10 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
             liveRow.style.display = 'none';
         }
     }
-    renderWindowCharts(yearSlice, historicalAverages, sYear, windowLabels, rangeText);
+    renderWindowCharts(yearSlice, historicalAverages, sYear, windowLabels, rangeText, monthPrecipTotal, yearPrecipTotal, monthName, yearLabel);
 }
 
-function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText) {
+function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText, monthPrecipTotal, yearPrecipTotal, monthName, yearLabel) {
     const isF = document.getElementById('unitToggle').checked;
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -844,7 +883,9 @@ function renderWindowCharts(yearSlice, histAverages, sYear, labels, rangeText) {
     Plotly.react('windowPrecipDiv', [precipTrace], { 
         ...baseLayout, 
         title: {
-            text: `<b>${sYear} Precipitation (Total: ${totalPrecip} ${precipUnit})</b><br>${lastStation.name}, ${lastStation.state}`,
+            text: `<b>${sYear} Precipitation</b><br>` +
+                  `Window: ${totalPrecip} ${precipUnit}  ·  ${monthName} Total: ${monthPrecipTotal.toFixed(isF ? 2 : 1)} ${precipUnit}  ·  ${yearLabel}: ${yearPrecipTotal.toFixed(isF ? 2 : 1)} ${precipUnit}<br>` +
+                  `${lastStation.name}, ${lastStation.state}`,
             x: 0.5,
             xanchor: 'center'
         },
